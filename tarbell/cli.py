@@ -31,6 +31,7 @@ from tarbell import __VERSION__ as VERSION
 if __name__ == "__main__" and __package__ is None:
     __package__ = "tarbell.cli"
 
+from .admin import TarbellAdminSite
 from .app import pprint_lines, process_xlsx, copy_global_values
 from .oauth import get_drive_api
 from .contextmanagers import ensure_settings, ensure_project
@@ -451,6 +452,20 @@ def tarbell_unpublish(command, args):
         show_error("Not implemented!")
 
 
+def tarbell_admin(command, args):
+    """Run the admin site"""
+    with ensure_settings(command, args) as settings:
+        # DEBUG
+        import pprint
+        pprint.pprint(settings.config)
+        
+        address = list_get(args, 0, "").split(":")
+        ip = list_get(address, 0, '127.0.0.1')
+        port = int(list_get(address, 1, '5000'))
+        
+        admin_site = TarbellAdminSite(settings)
+        admin_site.app.run(ip, port=port)
+    
 
 def _newproject(command, path, name, settings):
     """Actual heavy lifting for project creation."""
@@ -908,3 +923,11 @@ def_cmd(
     fn=tarbell_unpublish,
     usage='unpublish <target (default: staging)>',
     help='Remove the current project from <target>.')
+    
+
+def_cmd(
+    name='admin',
+    fn=tarbell_admin,
+    usage='admin',
+    help='Run administration site')
+

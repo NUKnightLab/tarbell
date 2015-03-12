@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Tarbell Admin</title>
+<meta charset="utf-8">
+<meta name="description" content="Tarbell Administration">
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.2/css/bootstrap.min.css">
+<link rel="stylesheet" href="/static/css/admin.css">
+<script src="http://cdnjs.cloudflare.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
+<script src="http://underscorejs.org/underscore-min.js"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.2/js/bootstrap.min.js"></script>
+<script type="text/javascript" src="/static/js/json2.js"></script>
+</head>
+<body>
+
+<div class="container-fluid">
+<div class="row">
+<div class="col-xs-12">
+   
+
+<ul class="nav nav-tabs" role="tablist">
+    <li class="active"><a href="#configuration" role="tab" data-toggle="tab">Configuration</a></li>
+    <li><a href="#blueprints" role="tab" data-toggle="tab">Blueprints</a></li>
+    <li><a href="#projects" role="tab" data-toggle="tab">Projects</a></li>
+</ul>
+
+
+<div class="tab-content">
+
+<!-- configuration -->
+    <div class="tab-pane active" id="configuration">   
+        <form class="form-horizontal">
+            <div class="form-group">
+                <label for="projects_path" class="col-xs-3 control-label">Projects path</label>
+                <div class="col-xs-9">
+                    <input type="text" class="form-control" id="google_account" value="{{ config.projects_path }}" placeholder="path to your prijects directory">
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="google_account" class="col-xs-3 control-label">Google account</label>
+                <div class="col-xs-9">
+                    <input type="email" class="form-control" id="google_account" value="{{ config.google_account }}" placeholder="Enter your Google email address">
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="google_credentials" class="col-xs-3 control-label">Google credentials</label>
+                <div class="col-xs-9">
+                    <a class="btn btn-default" data-toggle="collapse" href="#google_credentials">View Credentials</a>
+                    <div class="collapse" id="google_credentials">
+                        <p>
+<script type="text/javascript">
+    document.write('<pre>'+JSON.stringify({{ credentials|tojson }}, null, 4)+'</pre>');
+</script>
+                        </p>
+                    </div>
+                </div>
+            </div>            
+            <div class="form-group">
+                <label class="col-xs-3 control-label">Default S3 buckets</label>
+                <div class="col-xs-3"><p class="form-control-static text-muted">Name</p></div>
+                <div class="col-xs-5"><p class="form-control-static text-muted">Bucket</p></div>
+                <div class="col-xs-1">
+                <a class="btn text-success" id="config_add_bucket" href="#"><span class="glyphicon glyphicon-plus"></span></a>
+                </div>
+            </div>
+{% for key, value in config.default_s3_buckets.iteritems() %}
+            <div class="form-group">
+                <div class="col-xs-offset-3 col-xs-3">
+                    <input type="text" class="form-control" value="{{ key }}" placeholder="name">
+                </div>
+                <div class="col-xs-5">
+                    <input type="text" class="form-control" value="{{ value }}" placeholder="bucket name">
+                </div>
+                <div class="col-xs-1">
+                <a class="btn text-danger config-remove-bucket" href="#" onclick="$(this).closest('.form-group').remove()">
+                    <span class="glyphicon glyphicon-remove"></span></a>
+                </div>
+            </div>    
+ {% endfor %}           
+            <div class="form-group">
+                <div class="col-xs-offset-3 col-xs-9">
+                    <button type="button" class="btn btn-success">Save Configuration</button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+<!-- blueprints --> 
+    <div class="tab-pane" id="blueprints">  
+        <form class="form">  
+            <div class="row">
+                <div class="col-xs-12">
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="blueprint_url" placeholder="Blueprint URL, e.g. https://github.com/username/project" />
+                        <div class="input-group-btn">
+                            <button type="button" class="btn btn-success">Install Blueprint</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </form>
+
+        <h3>Installed Blueprints</h3>              
+        <table class="table">
+            <thead>
+                <th>Name</th>
+                <th>URL</th>
+            </thead>
+            <tbody>
+{% for item in config.project_templates %}
+                <tr>
+                    <td>{{ item.name }}</td>
+    {% if item.url %}
+                    <td><a href="{{ item.url }}" target="_blank">{{ item.url }}</a></td>
+    {% else %}
+                    <td><span class="text-muted">N/A</span></td>
+    {% endif %}
+                </tr>
+{% endfor %}            
+            </tbody>        
+        </table>  
+    </div>
+
+<!-- projects -->       
+    <div class="tab-pane" id="projects">
+        <form class="form">  
+            <div class="row">
+                <div class="col-xs-12">
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="blueprint_url" placeholder="URL to project repository" />
+                        <div class="input-group-btn">
+                            <button type="button" class="btn btn-success">Install Project</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </form>
+
+        <h3>Projects</h3>
+
+        <p>Click on a project title to switch to that project</p>
+        
+        <table class="table">
+            <thead>
+                <th>Name</th>
+                <th>Title</th>
+                <th>&nbsp</th>
+            </thead>
+            <tbody>
+{% for project in project_list %}
+                <tr>
+                    <td>{{ project.name }}</td>
+                    <td><a title="Switch to this project">{{ project.title }}</a></td>
+                    <td class="actions">
+                        <a class="btn btn-default" title="Update the blueprint in this project">Update</a>
+                        <a class="btn btn-default" title="Generate static files for this project">Generate</a>
+                        <a class="btn btn-default" title="Publish this project to a target">Publish</a>
+                        <a class="btn btn-default" title="Remove this project from a target">Unpublish</a>
+                    </td>
+                </tr>
+{% endfor %}            
+            </tbody>        
+        </table>  
+
+        <form class="form">  
+            <div class="row">
+                <div class="col-xs-12 actions">
+                    <button type="button" class="btn btn-success" data-toggle="modal" data-target="#newproject_modal">New Project</button>            
+                </div>
+            </div>
+        </form>
+    </div>
+</div> 
+  
+</div> <!-- // col-xs-12 -->
+</div> <!-- // row -->
+</div> <!-- // container-fluid -->
+
+<!-- modal: new project -->
+<div id="newproject_modal" class="modal fade" data-backdrop="static" data-keyboard="false">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title">New Project</h4>
+            </div>
+            <div class="modal-body">
+                <div id="newproject_info_pane"">
+                    <form>
+                        <div class="form-group">
+                            <label for="newproject_info_name">Short Directory Name</label>
+                            <input type="text" class="form-control" id="newproject_info_name" placeholder="my_project">
+                        </div>
+                        <div class="form-group">
+                            <label for="newproject_info_title">Full Title</label>
+                            <input type="text" class="form-control" id="newproject_info_title" placeholder="My Awesome Project">
+                        </div>
+                        <div class="form-group">
+                            <label for="newproject_info_template">Template</label>
+                            <select class="form-control">
+{% for item in config.project_templates %}
+                                <option value="{{ loop.index }}">{{ item.name }}</option>
+{% endfor %}            
+                            </select>
+                        </div>
+                    </form>
+                </div>
+                <div id="newproject_spreadsheet_pane">               
+                    <form>
+                        <p>
+                            <div>Would you like to create a Google spreadsheet?</div>
+                            <label class="radio-inline">
+                                <input type="radio" name="newproject_spreadsheet" value="0"> No
+                            </label>                         
+                            <label class="radio-inline">
+                                <input type="radio" name="newproject_spreadsheet" value="1"> Yes
+                            </label>
+                        </p>
+                        <div id="newproject_spreadsheet_details">
+                            <p>
+                            What Google account(s) should have access to this this spreadsheet?
+                            </p>
+                            <textarea id="newproject_spreadsheet_emails" class="form-control" rows="3"></textarea>
+                            <p class="text-muted">
+                            (Use a full email address, such as your.name@gmail.com. Separate multiple addresses with commas.)
+                            </p>
+                        </div>
+                    </form>
+                </div>
+                <div id="newproject_repo_pane">               
+                    <form class="form-horizontal">
+                        <p>
+                            <div>Would you like to create a Github repo for this project?</div>
+                            <label class="radio-inline">
+                                <input type="radio" name="newproject_repo" value="0"> No
+                            </label>                         
+                            <label class="radio-inline">
+                                <input type="radio" name="newproject_repo" value="1"> Yes
+                            </label>
+                        </p>
+                        <div id="newproject_repo_details">
+                            <p>
+                                <div class="form-group">
+                                    <label for="newproject_repo_username" class="col-xs-3 control-label">Github username</label>
+                                    <div class="col-xs-9">
+                                        <input type="text" class="form-control" id="newproject_repo_username">
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="newproject_repo_password" class="col-xs-3 control-label">Github password</label>
+                                    <div class="col-xs-9">
+                                        <input type="text" class="form-control" id="newproject_repo_password">
+                                    </div>
+                                </div>
+                            </p>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-default" id="newproject_back_button">Back</button>
+                <button type="button" class="btn btn-primary" id="newproject_next_button">Next</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- underscore templates -->
+
+<script type="text/template" id="s3_bucket_template">
+<div class="form-group">
+    <div class="col-xs-offset-3 col-xs-3">
+        <input type="text" class="form-control" value="" placeholder="name">
+    </div>
+    <div class="col-xs-5">
+        <input type="text" class="form-control" value="" placeholder="bucket name">
+    </div>
+    <div class="col-xs-1">
+        <a class="btn text-danger config-remove-bucket" href="#" onclick="$(this).closest('.form-group').remove();">
+        <span class="glyphicon glyphicon-remove"></span></a>
+    </div>
+</div>
+</script>
+
+
+<script type="text/javascript" src="/static/js/admin.js"></script>
+
+</body>
+</html>

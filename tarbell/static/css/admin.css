@@ -1,0 +1,20 @@
+body {
+    padding-top: 20px;
+}
+
+.tab-pane {
+    padding-top: 20px;
+}
+
+h3 {
+    margin-top: 40px;
+}
+
+.actions {
+    white-space: nowrap;
+    text-align: right;
+}
+
+#newproject_spreadsheet_emails {
+    resize: none;
+}
