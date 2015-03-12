@@ -150,22 +150,22 @@
                 <tr>
                     <td>{{ project.name }}</td>
                     <td>
-                        <a data-toggle="collapse" href="#{{ project.name }}" title="Switch to this project">{{ project.title }}</a>
-                        <div class="collapse" id="{{ project.name }}">
-                            <div class="well project-details">
-                            put some project details here?
-                            </div>
-                        </div>
+                        <a title="Switch to this project">{{ project.title }}</a>
                     </td>
                     <td class="actions nowrap">
+                        <a class="btn btn-default project-details" title="Edit project details">
+                            <i class="fa fa-lg fa-cog"></i>
+                        </a>
+                        <!--
                         <a class="btn btn-default project-preview" title="Preview this project">
                             <i class="fa fa-lg fa-eye"></i>
                         </a>
+                        -->
                         <a class="btn btn-default project-update" title="Update the blueprint in this project">
                             <i class="fa fa-lg fa-refresh"></i>
                         </a>
                         <a class="btn btn-default project-generate" title="Generate static files for this project">
-                            <i class="fa fa-lg fa-bolt"></i>
+                            <i class="fa fa-lg fa-magic"></i>
                         </a>
                         <a class="btn btn-default project-publish" title="Publish this project to a target">
                             <i class="fa fa-lg fa-cloud-upload text-success"></i>

@@ -18,13 +18,11 @@ function confirm_show(msg, callback) {
     $('#confirm_modal').modal('show');
 }
 
-
 function config_disable_bucket(target) {
     var $group = $(target).closest('.form-group');
     $group.find('input').attr('disabled', 'disabled');
     $group.find('.config-remove-bucket').hide();
     $group.find('.config-add-bucket').show();
-    console.log($group.find('.config-add-bucket'));
 }
 
 function config_enable_bucket(target) {
@@ -38,7 +36,6 @@ function config_remove_bucket(target) {
     $(target).closest('.form-group').remove();
 }
 
-
 $(function() {
     var s3_bucket_template = _.template($('#s3_bucket_template').html());
     
@@ -51,6 +48,7 @@ $(function() {
     });
                
     $('#config_save').click(function(event) {
+        // fakin in
         progress_show('Saving configuration');
     });
  
@@ -78,8 +76,7 @@ $(function() {
         console.log('unpublish');    
     });
 
-
-   
+ 
     $('#newproject_back_button').click(function(event) {
         var $cur_pane = $('#newproject_modal .modal-body > div').filter(':visible');
         var $prev_pane = $cur_pane.prev();
@@ -151,6 +148,5 @@ $(function() {
         
         $('#newproject_back_button').attr('disabled', 'disabled'); 
         $('#newproject_next_button').removeAttr('disabled'); 
-    });
-    
+    });    
 });
