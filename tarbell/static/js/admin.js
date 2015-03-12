@@ -1,3 +1,72 @@
+var s3_bucket_template = _.template($('#s3_bucket_template').html());
+var _error_alert_template = _.template($('#error_alert_template').html());
+
+
+function debug() {
+    if(console && console.log) {
+        // converts arguments to real array
+        var args = Array.prototype.slice.call(arguments);
+        args.unshift('**');
+        console.log.apply(console, args); // call the function
+    }
+}
+
+function error_hide() {
+    var $tab = $('div.tab-pane').find('div[role="alert"]').remove();   
+}
+
+function error_alert(message) {
+    error_hide();
+    $('div.tab-pane.active').prepend(_error_alert_template({message: message}));    
+}
+
+
+function noop() {}
+//
+// ajax
+//
+
+function _ajax(url, type, data, on_error, on_success, on_complete) {
+    var _error = '';
+    
+    $.ajax({
+        url: url,
+        type: type,
+        data: data,
+        dataType: 'json',
+        timeout: 45000, // ms
+        error: function(xhr, status, err) { 
+            _error = err || status;
+            debug('ajax error', _error)           
+            on_error(_error);
+        },
+        success: function(data) {
+            debug('ajax data', data);
+            if(data.error) {
+                _error = data.error;
+                on_error(_error);
+            } else {
+                on_success(data);
+            }
+        },
+        complete: function() {
+            on_complete(_error);
+        }
+    });
+}
+
+function ajax_get(url, data, on_error, on_success, on_complete) {
+    _ajax(url, 'GET', data, on_error, on_success || noop, on_complete || noop);
+}
+
+function ajax_post(url, data, on_error, on_success, on_complete) {
+    _ajax(url, 'POST', data, on_error, on_success || noop, on_complete || noop);
+}
+
+//
+// modals
+//
+
 function progress_show(msg) {
     $('#progress_modal .modal-msg').html(msg);
     $('#progress_modal').modal('show');
@@ -7,16 +76,6 @@ function progress_hide() {
     $('#progress_modal').modal('hide');
 }
 
-function confirm_show(msg, callback) {
-    $('#confirm_modal .modal-msg').html(msg);
-    $('#confirm_modal .btn-primary').one('click.confirm', function(event) {
-        $('#confirm_modal').modal('hide');
-        if(callback) {
-            callback();
-        }
-    });
-    $('#confirm_modal').modal('show');
-}
 
 function config_disable_bucket(target) {
     var $group = $(target).closest('.form-group');
@@ -32,17 +91,30 @@ function config_enable_bucket(target) {
     $group.find('.config-remove-bucket').show();
 }
 
+//
+// config
+//
+
 function config_remove_bucket(target) {
     $(target).closest('.form-group').remove();
 }
 
+//
+// project
+//
+
+
+
 $(function() {
-    var s3_bucket_template = _.template($('#s3_bucket_template').html());
+    // Clear error alerts as we switch from tab to tab
+    $('a[data-toggle="tab"]').on('hide.bs.tab', function(event) {
+        error_hide();
+    });
+
     
     //
-    // config
-    //
-    
+    // config tab
+    //    
     $('#config_add_bucket').click(function(event) {
         $(this).closest('.form-group').after(s3_bucket_template());
     });
@@ -53,11 +125,48 @@ $(function() {
     });
  
     //
-    // project
+    // projects tab
     //
+    $('.project-run').click(function(event) {
+        console.log('project run');
+        var $parent = $(this).closest('td');
+        var project = $parent.attr('data-project');
+        console.log(project);
+        
+        ajax_get('/project/run/'+project, {}, 
+            function(error) {
+                console.log('ERROR', error);
+                error_alert(error);
+            },
+            function(data) {
+                console.log('SUCCESS', data);
+                window.open("http://127.0.0.1:5000");
+                
+                $parent.find('.project-run').hide();
+                $parent.find('.project-stop').show();
+            }
+        );
+    });
     
-    $('.project-preview').click(function(event) {
-        console.log('generate');    
+    $('.project-stop').click(function(event) {
+        console.log('project stop');
+        var $parent = $(this).closest('td');
+        var project = $parent.attr('data-project');
+        console.log(project);
+        
+        ajax_get('/project/stop/', {}, 
+            function(error) {
+                alert(error);   // temp
+            },
+            function(data) {
+                $parent.find('.project-stop').hide();
+                $parent.find('.project-run').show();
+            }
+        );
+    });
+    
+    $('.project-details').click(function(event) {
+        console.log('details');    
     });
     
     $('.project-update').click(function(event) {

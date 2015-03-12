@@ -461,7 +461,7 @@ def tarbell_admin(command, args):
         
         address = list_get(args, 0, "").split(":")
         ip = list_get(address, 0, '127.0.0.1')
-        port = int(list_get(address, 1, '5000'))
+        port = int(list_get(address, 1, '5001'))
         
         admin_site = TarbellAdminSite(settings)
         admin_site.app.run(ip, port=port)

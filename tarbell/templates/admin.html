@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<title>Tarbell Admin</title>
+<title>Tarbell Administration</title>
 <meta charset="utf-8">
 <meta name="description" content="Tarbell Administration">
 <link rel="stylesheet" href="/static/bootstrap-3.3.2-dist/css/bootstrap.min.css">
@@ -17,17 +17,21 @@
 <div class="container-fluid">
 <div class="row">
 <div class="col-xs-12">
-   
+
+<div id="site_link">
+    <a href="http://www.tarbell.io/" target="_blank">tarbell.io</a>
+</div>
+
 <ul class="nav nav-tabs" role="tablist">
-    <li class="active"><a href="#configuration" role="tab" data-toggle="tab">Configuration</a></li>
-    <li><a href="#blueprints" role="tab" data-toggle="tab">Blueprints</a></li>
-    <li><a href="#projects" role="tab" data-toggle="tab">Projects</a></li>
+    <li class="active"><a href="#configuration_tab" role="tab" data-toggle="tab">Configuration</a></li>
+    <li><a href="#blueprints_tab" role="tab" data-toggle="tab">Blueprints</a></li>
+    <li><a href="#projects_tab" role="tab" data-toggle="tab">Projects</a></li>
 </ul>
 
 <div class="tab-content">
 
 <!-- configuration -->
-    <div class="tab-pane active" id="configuration">   
+    <div class="tab-pane active" id="configuration_tab">   
         <form class="form-horizontal">
             <div class="form-group">
                 <label for="projects_path" class="col-xs-3 control-label">Projects path</label>
@@ -44,7 +48,9 @@
             <div class="form-group">
                 <label for="google_credentials" class="col-xs-3 control-label">Google credentials</label>
                 <div class="col-xs-9">
-                    <a class="btn btn-default" data-toggle="collapse" href="#google_credentials">View Credentials</a>
+                    <p class="form-control-static">
+                        <a data-toggle="collapse" href="#google_credentials" aria-expanded="false">View Credentials</a>
+                    </p>
                     <div class="collapse" id="google_credentials">
                         <p>
 <script type="text/javascript">
@@ -57,7 +63,7 @@
             <div class="form-group">
                 <label class="col-xs-3 control-label">Default S3 buckets</label>
                 <div class="col-xs-3"><p class="form-control-static text-muted">Name</p></div>
-                <div class="col-xs-5"><p class="form-control-static text-muted">Bucket</p></div>
+                <div class="col-xs-5"><p class="form-control-static text-muted">Bucket Name</p></div>
                 <div class="col-xs-1">
                 <a class="btn text-success" id="config_add_bucket" href="#"><i class="fa fa-lg fa-plus"></i></a>
                 </div>
@@ -87,21 +93,20 @@
     </div>
 
 <!-- blueprints --> 
-    <div class="tab-pane" id="blueprints">  
+    <div class="tab-pane" id="blueprints_tab">  
         <form class="form">  
             <div class="row">
                 <div class="col-xs-12">
                     <div class="input-group">
                         <input type="text" class="form-control" id="blueprint_url" placeholder="Blueprint URL, e.g. https://github.com/username/project" />
                         <div class="input-group-btn">
-                            <button type="button" class="btn btn-primary">Install Blueprint</button>
+                            <button type="button" class="btn btn-default">Install Blueprint</button>
                         </div>
                     </div>
                 </div>
             </div>
         </form>
 
-        <h3>Installed Blueprints</h3>              
         <table class="table">
             <thead>
                 <th>Name</th>
@@ -123,44 +128,41 @@
     </div>
 
 <!-- projects -->       
-    <div class="tab-pane" id="projects">
+    <div class="tab-pane" id="projects_tab">
         <form class="form">  
             <div class="row">
                 <div class="col-xs-12">
                     <div class="input-group">
                         <input type="text" class="form-control" id="blueprint_url" placeholder="URL to project repository" />
                         <div class="input-group-btn">
-                            <button type="button" class="btn btn-primary">Install Project</button>
+                            <button type="button" class="btn btn-default">Install Project</button>
                         </div>
                     </div>
                 </div>
             </div>
         </form>
-
-        <h3>Projects</h3>
-        
+       
         <table class="table">
             <thead>
-                <th class="col-xs-3">Name</th>
+                <th class="col-xs-3">Directory</th>
                 <th class="col-xs-6">Title</th>
                 <th class="col-xs-3">&nbsp;</th>
             </thead>
             <tbody>
 {% for project in project_list %}
                 <tr>
-                    <td>{{ project.name }}</td>
-                    <td>
-                        <a title="Switch to this project">{{ project.title }}</a>
-                    </td>
-                    <td class="actions nowrap">
+                    <td>{{ project.directory }}</td>
+                    <td>{{ project.title }}</td>
+                    <td class="actions nowrap" data-project="{{ project.name }}">
+                        <a class="btn btn-default project-run" title="Run this project">
+                            <i class="fa fa-lg fa-play"></i>
+                        </a>
+                        <a class="btn btn-default project-stop" title="Stop this project" style="display: none;">
+                            <i class="fa fa-lg fa-stop"></i>
+                        </a>
                         <a class="btn btn-default project-details" title="Edit project details">
                             <i class="fa fa-lg fa-cog"></i>
                         </a>
-                        <!--
-                        <a class="btn btn-default project-preview" title="Preview this project">
-                            <i class="fa fa-lg fa-eye"></i>
-                        </a>
-                        -->
                         <a class="btn btn-default project-update" title="Update the blueprint in this project">
                             <i class="fa fa-lg fa-refresh"></i>
                         </a>
@@ -209,24 +211,8 @@
     </div>
 </div>
 
-<!-- modal: confirm, should have data-backdrop="static" -->
-<div id="confirm_modal" class="modal fade" data-keyboard="false">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-body">
-                <p class="modal-msg"></p>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-default" data-dismiss="modal">No</button>
-                <button class="btn btn-primary">Yes</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-
-<!-- modal: new project, should have data-backdrop="static" -->
-<div id="newproject_modal" class="modal fade" data-keyboard="false">
+<!-- modal: new project -->
+<div id="newproject_modal" class="modal fade" data-backdrop="static" data-keyboard="false">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
@@ -268,9 +254,10 @@
                             <p>
                             What Google account(s) should have access to this this spreadsheet?
                             </p>
-                            <textarea id="newproject_spreadsheet_emails" class="form-control" rows="3"></textarea>
-                            <p class="text-muted">
-                            (Use a full email address, such as your.name@gmail.com. Separate multiple addresses with commas.)
+                            <textarea id="newproject_spreadsheet_emails" class="form-control" rows="3" aria-describedby="newproject_spreadsheet_emails_help"></textarea>
+                            <span id="newproject_spreadsheet_emails_help" class="help-block">
+                            Use a full email address, such as your.name@gmail.com. Separate multiple addresses with commas.
+                            </span>
                             </p>
                         </div>
                     </form>
@@ -332,6 +319,13 @@
         <a class="btn text-danger config-remove-bucket" href="#" onclick="config_remove_bucket(this)">
             <i class="fa fa-lg fa-remove"></i></a>
     </div>
+</div>
+</script>
+
+<script type="text/template" id="error_alert_template">
+<div class="alert alert-danger alert-dismissible" role="alert">
+    <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+    <%= message %>
 </div>
 </script>
 
