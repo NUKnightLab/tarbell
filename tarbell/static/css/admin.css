@@ -10,34 +10,12 @@ h3 {
     margin-top: 40px;
 }
 
-.actions {
+.nowrap {
     white-space: nowrap;
     text-align: right;
 }
 
-#newproject_spreadsheet_emails {
-    resize: none;
-}
-
-/*  progress spinner
-*/
-.glyphicon.spinning {
-    animation: spin 2s infinite linear;
-    -webkit-animation: spin2 2s infinite linear;
-}
-
-@keyframes spin {
-    from { transform: scale(1) rotate(0deg);}
-    to { transform: scale(1) rotate(360deg);}
-}
-
-@-webkit-keyframes spin2 {
-    from { -webkit-transform: rotate(0deg);}
-    to { -webkit-transform: rotate(360deg);}
-}
-
-
-/*  in-modal progress panel 
+/*  modal progress panel 
 */
 .modal-progress {
     position:absolute;
@@ -63,9 +41,17 @@ h3 {
     text-align: center;
     vertical-align: middle;
 }
-.modal-progress span.glyphicon {
-    font-size: 40px;
+.modal-progress i {
+    margin-top: 10px;
     margin-bottom: 10px;
 }
 
+
+/*  projects
+*/
+#newproject_spreadsheet_emails {
+    resize: none;
+}
+
+.project-details { margin-top: 10px; }
 
