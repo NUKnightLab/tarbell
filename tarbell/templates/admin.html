@@ -4,11 +4,11 @@
 <title>Tarbell Admin</title>
 <meta charset="utf-8">
 <meta name="description" content="Tarbell Administration">
-<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.2/css/bootstrap.min.css">
+<link rel="stylesheet" href="/static/bootstrap-3.3.2-dist/css/bootstrap.min.css">
 <link rel="stylesheet" href="/static/css/admin.css">
-<script src="http://cdnjs.cloudflare.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
-<script src="http://underscorejs.org/underscore-min.js"></script>
-<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.2/js/bootstrap.min.js"></script>
+<script type="text/javascript" src="/static/js/jquery-1.10.2.min.js"></script>
+<script type="text/javascript" src="/static/js/underscore-1.8.2.min.js"></script>
+<script type="text/javascript" src="/static/bootstrap-3.3.2-dist/js/bootstrap.min.js"></script>
 <script type="text/javascript" src="/static/js/json2.js"></script>
 </head>
 <body>
@@ -79,7 +79,7 @@
  {% endfor %}           
             <div class="form-group">
                 <div class="col-xs-offset-3 col-xs-9">
-                    <button type="button" class="btn btn-success">Save Configuration</button>
+                    <button type="button" class="btn btn-success" id="config_save">Save Configuration</button>
                 </div>
             </div>
         </form>
@@ -175,6 +175,24 @@
 </div> <!-- // col-xs-12 -->
 </div> <!-- // row -->
 </div> <!-- // container-fluid -->
+
+<!-- modal: progress -->
+<div id="progress_modal" class="modal fade" data-backdrop="static" data-keyboard="false">
+    <div class="modal-dialog">
+        <div class="modal-body">
+            <div class="modal-progress">
+                <div>
+                    <div>
+                        <span class="glyphicon glyphicon-asterisk spinning"></span>
+                        <p><span class="modal-msg"></span>...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
 
 <!-- modal: new project -->
 <div id="newproject_modal" class="modal fade" data-backdrop="static" data-keyboard="false">

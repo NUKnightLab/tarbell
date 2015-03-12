@@ -1,3 +1,12 @@
+function progress_show(msg) {
+    $('#progress_modal .modal-msg').html(msg);
+    $('#progress_modal').modal('show');
+}
+
+function progress_hide() {
+    $('#progress_modal').modal('hide');
+}
+
 $(function() {
 
     var s3_bucket_template = _.template($('#s3_bucket_template').html());
@@ -7,6 +16,12 @@ $(function() {
         $(this).closest('.form-group').after(s3_bucket_template());
     });
         
+        
+    $('#config_save').click(function(event) {
+        console.log('config_save');
+        progress_show('Saving configuration');
+        //$('#progress_modal').modal('show');
+    });
  
     $('#newproject_back_button').click(function(event) {
         var $cur_pane = $('#newproject_modal .modal-body > div').filter(':visible');
