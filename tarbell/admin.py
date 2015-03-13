@@ -23,16 +23,11 @@ class TarbellAdminSite:
         self.app.add_url_rule('/project/run/<project>/', view_func=self.run_server)
         self.app.add_url_rule('/project/stop/', view_func=self.stop_server)
         
-        api = get_drive_api()
-        print api.credentials
-        print api.credentials.to_json()
-       
+        api = get_drive_api()       
         self.credentials = json.loads(api.credentials.to_json())
-        print type(self.credentials)
-    
+ 
+     
     def main(self):
-    
-        project_list = [{'name': 'ethelpayne', 'title': 'Ethel Payne: A life in jounalism'}]
         project_list = []
         
         projects_path = self.settings.config.get('projects_path')
@@ -41,6 +36,9 @@ class TarbellAdminSite:
             try:
                 filename, pathname, description = imp.find_module('tarbell_config', [project_path])
                 config = imp.load_module(directory, filename, pathname, description)
+                
+                print 'CONFIG'
+                print dir(config)
                 title = config.DEFAULT_CONTEXT.get("title", directory)
                 project_list.append({'directory': directory, 'title': title})
             except ImportError:
@@ -62,7 +60,7 @@ class TarbellAdminSite:
     def run_server(self, project):
         print 'DEBUG', 'run_server'
         try:
-            raise Exception('this does not really work yet')
+            #raise Exception('this does not really work yet')
             
             project_path = os.path.join(
                 self.settings.config.get('projects_path'), project)

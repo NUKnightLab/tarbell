@@ -12,6 +12,10 @@ function debug() {
     }
 }
 
+//
+// error
+//
+
 function error_hide() {
     var $tab = $('div.tab-pane').find('div[role="alert"]').remove();   
 }
@@ -21,11 +25,11 @@ function error_alert(message) {
     $('div.tab-pane.active').prepend(_error_alert_template({message: message}));    
 }
 
-
-function noop() {}
 //
 // ajax
 //
+
+function noop() {}
 
 function _ajax(url, type, data, on_error, on_success, on_complete) {
     var _error = '';
@@ -101,7 +105,6 @@ function config_enable_bucket(target) {
     $group.find('.config-remove-bucket').show();
 }
 
-
 function config_remove_bucket(target) {
     $(target).closest('.form-group').remove();
 }
@@ -139,6 +142,7 @@ $(function() {
 // ------------------------------------------------------------
 // projects tab
 // ------------------------------------------------------------
+
     $('.project-details').click(function(event) {
         console.log('details');    
     });
@@ -227,21 +231,9 @@ $(function() {
     });  
     
 // ------------------------------------------------------------
-// unpublish/publish modal
+// publish modal
 // ------------------------------------------------------------
  
-    $('#unpublish_modal').on('show.bs.modal', function(event) {
-        var html = '';
-        for(key in config.default_s3_buckets) {
-            html += _select_bucket_template({
-                name: key, 
-                bucket: config.default_s3_buckets[key]
-            });
-        }
-        $('#unpublish_bucket').html(html).val('staging');
-    });
-
-   
     $('#publish_modal').on('show.bs.modal', function(event) {
         var html = '';
         for(key in config.default_s3_buckets) {
@@ -254,17 +246,30 @@ $(function() {
     });
     
 // ------------------------------------------------------------
-// runproject modal
+// run modal
 // ------------------------------------------------------------
 
-    /*
-    $('.project-run').click(function(event) {
-        console.log('project run');
-        var $parent = $(this).closest('td');
-        console.log($parent);
-        var project = $parent.attr('data-project');
-        console.log(project);
+    $('#run_modal').on('reset', function(event) {
+        $('#run_stop_button')
+            .attr('disabled', 'disabled');
+        $('#run_address, #run_done_button, #run_button')
+            .removeAttr('disabled');    
+    });
+
+    $('#run_button').click(function(event) {
+        console.log($('#run_modal').data('data-project'));
         
+        var $address = $('#run_address');
+        var address = $address.val().trim();
+        if(!address) {
+            $address.focus()
+                .closest('.form-group').addClass('has-error');
+            return;
+        }       
+        $address.closest('.form-group').removeClass('has-error');
+        
+        var project = $('#run_modal').data('data-project');
+    
         ajax_get('/project/run/'+project, {}, 
             function(error) {
                 error_alert(error);
@@ -272,63 +277,36 @@ $(function() {
             function(data) {
                 window.open("http://127.0.0.1:5000");
                 
-                $parent.find('.project-run').hide();
-                $parent.find('.project-stop').show();
+                $('#run_address, #run_done_button, #run_button')
+                    .attr('disabled', 'disabled');
+                $('#run_stop_button')
+                    .removeAttr('disabled');
             }
         );
+
+       
     });
     
-    $('.project-stop').click(function(event) {
-        console.log('project stop');
-        var $parent = $(this).closest('td');
-        
-        var project = $parent.attr('data-project');
-        console.log(project);
-        
+    $('#run_stop_button').click(function(event) {
         ajax_get('/project/stop/', {}, 
             function(error) {
                 alert(error);   // temp
             },
             function(data) {
-                $parent.find('.project-stop').hide();
-                $parent.find('.project-run').show();
+                $('#run_modal').trigger('reset');
             }
         );
     });
-    */
-
-    $('#runproject_modal').on('reset', function(event) {
-        $('#runproject_stop_button')
-            .attr('disabled', 'disabled');
-        $('#runproject_address, #runproject_done_button, #runproject_run_button')
-            .removeAttr('disabled');    
-    });
-
-    $('#runproject_run_button').click(function(event) {
-        var $address = $('#runproject_address');
-        var address = $address.val().trim();
-        if(!address) {
-            $address.focus()
-                .closest('.form-group').addClass('has-error');
-            return;
-        }
-        
-        $address.closest('.form-group').removeClass('has-error');
-        
-        $('#runproject_address, #runproject_done_button, #runproject_run_button')
-            .attr('disabled', 'disabled');
-        $('#runproject_stop_button')
-            .removeAttr('disabled');
-    });
-    
-    $('#runproject_stop_button').click(function(event) {
-        $('#runproject_modal').trigger('reset');
-    });
      
-    $('#runproject_modal').on('show.bs.modal', function(event) {
-        $('#runproject_address').val('127.0.0.1:5000')
+    $('#run_modal').on('show.bs.modal', function(event) {
+        $('#run_address').val('127.0.0.1:5000')
             .closest('.form-group').removeClass('has-error');
-
         $(this).trigger('reset');
     });  
+    
+    $('#run_modal, #publish_modal').on('show.bs.modal', function(event) {
+        var directory = $(event.relatedTarget).closest('tr').attr('data-project');
+        $(this).data('data-project', directory);      
+        $('.project-name').html(directory);
+    });
 });

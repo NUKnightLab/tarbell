@@ -150,10 +150,10 @@
             </thead>
             <tbody>
 {% for project in project_list %}
-                <tr>
+                <tr data-project="{{ project.directory }}">
                     <td>{{ project.directory }}</td>
-                    <td><a class="project-title" title="Run this project" data-toggle="modal" data-target="#runproject_modal">{{ project.title }}</a></td>
-                    <td class="actions nowrap" data-project="{{ project.directory }}">
+                    <td><a class="project-title" title="Run this project" data-toggle="modal" data-target="#run_modal">{{ project.title }}</a></td>
+                    <td class="actions nowrap">
                         <a class="btn btn-default project-details" title="Edit project details">
                             <i class="fa fa-lg fa-cog"></i>
                         </a>
@@ -166,10 +166,6 @@
                         <a class="btn btn-default project-publish" title="Publish this project to a target"
                             data-toggle="modal" data-target="#publish_modal">
                             <i class="fa fa-lg fa-cloud-upload text-success"></i>
-                        </a>
-                        <a class="btn btn-default project-unpublish" title="Remove this project from a target"
-                            data-toggle="modal" data-target="#unpublish_modal">
-                            <i class="fa fa-lg fa-cloud-download text-danger"></i>
                         </a>
                     </td>
                 </tr>
@@ -207,54 +203,27 @@
     </div>
 </div>
 
-<!-- modal: run project -->
-<div id="runproject_modal" class="modal fade" data-backdrop="static" data-keyboard="false">
+<!-- modal: run -->
+<div id="run_modal" class="modal fade" data-backdrop="static" data-keyboard="false">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h4 class="modal-title">Run Project</h4>
+                <h4 class="modal-title">Run Project: <span class="project-name"></span></h4>
             </div>
             <div class="modal-body">
                 <form class='form-horizontal'>
                     <div class="form-group">
-                        <label for="runproject_address" class="col-xs-2 control-label">Address</label>
+                        <label for="run_address" class="col-xs-2 control-label">Address</label>
                         <div class="col-xs-10">
-                            <input type="text" class="form-control" id="runproject_address" value="127.0.0.1:5000">
+                            <input type="text" class="form-control" id="run_address" value="127.0.0.1:5000">
                         </div>
                     </div>
                 </form>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-default" id="runproject_done_button" data-dismiss="modal">Done</button>
-                <button type="button" class="btn btn-success" id="runproject_run_button">Run</button>
-                <button type="button" class="btn btn-danger" id="runproject_stop_button">Stop</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- modal: unpublish -->
-<div id="unpublish_modal" class="modal fade" data-backdrop="static" data-keyboard="false">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h4 class="modal-title">Unpublish Project</h4>
-            </div>
-            <div class="modal-body">
-                <form class='form-horizontal'>
-                    <div class="form-group">
-                        <label for="unpublish_bucket" class="col-xs-2 control-label">Bucket</label>
-                        <div class="col-xs-10">
-                            <select id="unpublish_bucket" class="form-control">
-                                <option>Sample</option>
-                            </select>
-                        </div>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-default" id="unpublish_done_button" data-dismiss="modal">Done</button>
-                <button type="button" class="btn btn-danger" id="unpublish_button">Unpublish</button>
+                <button type="button" class="btn btn-default" id="run_done_button" data-dismiss="modal">Done</button>
+                <button type="button" class="btn btn-success" id="run_button">Run</button>
+                <button type="button" class="btn btn-danger" id="run_stop_button">Stop</button>
             </div>
         </div>
     </div>
@@ -265,7 +234,7 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h4 class="modal-title">Publish Project</h4>
+                <h4 class="modal-title">Publish Project: <span class="project-name"></span></h4>
             </div>
             <div class="modal-body">
                 <form class='form-horizontal'>
@@ -400,7 +369,7 @@
 </script>
 
 <script type="text/template" id="select_bucket_template">
-    <option value="<%= name %>"><%= bucket %></option>
+<option value="<%= name %>"><%= bucket %></option>
 </script>
 
 <script type="text/template" id="error_alert_template">
