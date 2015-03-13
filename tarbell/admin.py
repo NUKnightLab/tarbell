@@ -29,7 +29,7 @@ class TarbellAdminSite:
        
         self.credentials = json.loads(api.credentials.to_json())
         print type(self.credentials)
-
+    
     def main(self):
     
         project_list = [{'name': 'ethelpayne', 'title': 'Ethel Payne: A life in jounalism'}]
@@ -60,11 +60,14 @@ class TarbellAdminSite:
             site.app.run('0.0.0.0', port=5000, use_reloader=False)
  
     def run_server(self, project):
-        print 'run_server'
+        print 'DEBUG', 'run_server'
         try:
+            raise Exception('this does not really work yet')
+            
             project_path = os.path.join(
                 self.settings.config.get('projects_path'), project)
-            print project_path
+            
+            print 'DEBUG', project_path
             self.p = multiprocessing.Process(
                 target=self._run_server, args=(project_path,))
             self.p.start()
@@ -74,7 +77,7 @@ class TarbellAdminSite:
             return jsonify({'error': str(e)})
             
     def stop_server(self):
-        print 'stop_server'
+        print 'DEBUG', 'stop_server'
         try:
             if self.p:
                 self.p.terminate()

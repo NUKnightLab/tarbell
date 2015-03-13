@@ -87,3 +87,7 @@ a[data-toggle="collapse"][aria-expanded="true"]:before  {
     margin-top: 20px;
     border-bottom: 2px solid #ddd;
 }
+
+.project-title, .project-title:hover {
+    cursor: pointer;
+}
