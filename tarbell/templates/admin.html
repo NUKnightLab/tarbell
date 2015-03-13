@@ -152,21 +152,23 @@
 {% for project in project_list %}
                 <tr data-project="{{ project.directory }}">
                     <td>{{ project.directory }}</td>
-                    <td><a class="project-title" title="Run this project" data-toggle="modal" data-target="#run_modal">{{ project.title }}</a></td>
+                    <td><a role="button" class="project-title" title="Run this project" data-toggle="modal" data-target="#run_modal">
+                        {{ project.title }}</a>
+                    </td>
                     <td class="actions nowrap">
-                        <a class="btn btn-default project-details" title="Edit project details">
+                        <button class="btn btn-default project-details" title="Edit project details">
                             <i class="fa fa-lg fa-cog"></i>
-                        </a>
-                        <a class="btn btn-default project-update" title="Update the blueprint in this project">
+                        </button>
+                        <button class="btn btn-default project-update" title="Update the blueprint in this project">
                             <i class="fa fa-lg fa-refresh"></i>
-                        </a>
-                        <a class="btn btn-default project-generate" title="Generate static files for this project">
+                        </button>
+                        <button class="btn btn-default project-generate" title="Generate static files for this project">
                             <i class="fa fa-lg fa-magic"></i>
-                        </a>
-                        <a class="btn btn-default project-publish" title="Publish this project to a target"
+                        </button>
+                        <button class="btn btn-default project-publish" title="Publish this project to a target"
                             data-toggle="modal" data-target="#publish_modal">
                             <i class="fa fa-lg fa-cloud-upload text-success"></i>
-                        </a>
+                        </button>
                     </td>
                 </tr>
 {% endfor %}            
