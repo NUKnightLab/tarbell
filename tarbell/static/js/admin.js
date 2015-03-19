@@ -7,6 +7,29 @@ var _select_bucket_template = _.template($('#select_bucket_template').html());
 var _error_alert_template = _.template($('#error_alert_template').html());
 
 //
+// generic modal event handlers
+//
+
+modal_error_show = function(event, msg) {
+    $(this).find('.modal-error .modal-msg').html(msg);
+    $(this).find('.modal-error').show();    
+};
+modal_error_hide = function(event, msg) {
+    $(this).find('.modal-error .modal-msg').html('');
+    $(this).find('.modal-error').hide();         
+};
+
+modal_progress_show = function(event, msg) {
+    $(this).find('.modal-progress .modal-msg').html(msg);
+    $(this).find('.modal-progress').show();    
+};
+
+modal_progress_hide = function(event) {
+    $(this).find('.modal-progress').hide(); 
+};
+
+
+//
 // debug
 //
 
@@ -279,16 +302,31 @@ $(function() {
 // run modal
 // ------------------------------------------------------------
 
-    $('#run_modal').on('reset', function(event) {
-        $('#run_stop_button')
-            .attr('disabled', 'disabled');
-        $('#run_address, #run_done_button, #run_button')
-            .removeAttr('disabled');    
-    });
-
-    $('#run_button').click(function(event) {
-        console.log($('#run_modal').data('data-project'));
+    $('#run_modal')
+        .on('error_show', modal_error_show)
+        .on('error_hide', modal_error_hide)
+        .on('progress_show', modal_progress_show)
+        .on('progress_hide', modal_progress_hide)        
+        .on('reset', function(event) {
+            $('#run_address').closest('.form-group').removeClass('has-error');
+            
+            $('#run_stop_button')
+                .attr('disabled', 'disabled');
+            $('#run_address, #run_done_button, #run_button')
+                .removeAttr('disabled');    
+        })
+        .on('show.bs.modal', function(event) {
+            $('#run_address').val('127.0.0.1:5000')
+                .closest('.form-group').removeClass('has-error');
+            $(this)
+                .trigger('error_hide')
+                .trigger('progress_hide')
+                .trigger('reset');
+         });      
         
+    $('#run_button').click(function(event) {
+        var $modal = $('#run_modal');
+                
         var $address = $('#run_address');
         var address = $address.val().trim();
         if(!address) {
@@ -300,21 +338,29 @@ $(function() {
         
         var project = $('#run_modal').data('data-project');
     
-        ajax_get('/project/run/'+project, {}, 
+        $modal.trigger('progress_show', 'Starting preview server');
+        
+        ajax_get('/project/run/', 
+            {
+                project: project,
+                address: address
+            }, 
             function(error) {
                 error_alert(error);
             },
             function(data) {
-                window.open("http://127.0.0.1:5000");
+                window.open('http://'+address);
                 
                 $('#run_address, #run_done_button, #run_button')
                     .attr('disabled', 'disabled');
                 $('#run_stop_button')
                     .removeAttr('disabled');
+            },
+            function() {
+                console.log('COMPLETE');
+                $modal.trigger('progress_hide');
             }
         );
-
-       
     });
     
     $('#run_stop_button').click(function(event) {
@@ -327,13 +373,7 @@ $(function() {
             }
         );
     });
-     
-    $('#run_modal').on('show.bs.modal', function(event) {
-        $('#run_address').val('127.0.0.1:5000')
-            .closest('.form-group').removeClass('has-error');
-        $(this).trigger('reset');
-    });  
-    
+        
     $('#run_modal, #publish_modal').on('show.bs.modal', function(event) {
         var directory = $(event.relatedTarget).closest('tr').attr('data-project');
         $(this).data('data-project', directory);      
