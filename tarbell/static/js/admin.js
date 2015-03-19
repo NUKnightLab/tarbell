@@ -189,9 +189,6 @@ $(function() {
         console.log('update');    
     });
     
-    $('.project-generate').click(function(event) {
-        console.log('generate');    
-    });
 
 // ------------------------------------------------------------
 // newproject modal
@@ -261,50 +258,63 @@ $(function() {
         }
     });
     
-    $('#newproject_modal').on('show.bs.modal', function(event) {
-        $('#newproject_info_name, #newproject_info_title').val('');
+    modal_init($('#newproject_modal'))
+        .on('show.bs.modal', function(event) {
+            $(this).trigger('error_hide').trigger('progress_hide');
+            
+            $('#newproject_info_name, #newproject_info_title').val('');
  
-        $("input[name='newproject_spreadsheet'][value='']").prop('checked', true);
-        $('#newproject_spreadsheet_details').hide();
-        $('#newproject_spreadsheet_emails').val(config.google_account);
+            $("input[name='newproject_spreadsheet'][value='']").prop('checked', true);
+            $('#newproject_spreadsheet_details').hide();
+            $('#newproject_spreadsheet_emails').val(config.google_account);
         
-        $("input[name='newproject_repo'][value='']").prop('checked', true);
-        $('#newproject_repo_details').hide();
-        $('#newproject_repo_username, #newproject_repo_password').val('');
+            $("input[name='newproject_repo'][value='']").prop('checked', true);
+            $('#newproject_repo_details').hide();
+            $('#newproject_repo_username, #newproject_repo_password').val('');
         
-        $('#newproject_modal .modal-body > div').hide();
-        $('#newproject_info_pane').show();   
+            $('#newproject_modal .modal-body > div').hide();
+            $('#newproject_info_pane').show();   
         
-        $('#newproject_back_button, #newproject_next_button, #newproject_create_button')
-            .attr('disabled', 'disabled'); 
-    });  
+            $('#newproject_back_button, #newproject_next_button, #newproject_create_button')
+                .attr('disabled', 'disabled'); 
+        });  
  
 // ------------------------------------------------------------
 // generate modal
 // ------------------------------------------------------------
 
     $('#generate_button').click(function(event) {
-        // TODO
+        $('#generate_modal').trigger('error_show', 'todo, not implemented');
     });
       
-    $('#generate_modal').on('show.bs.modal', function(event) {
-        $('#generate_dir').val('').focus();
-    });
+    modal_init($('#generate_modal'))
+        .on('show.bs.modal', function(event) {
+            $(this).trigger('error_hide').trigger('progress_hide');
+            
+            $('#generate_dir').val('').focus();
+        });
     
 // ------------------------------------------------------------
 // publish modal
 // ------------------------------------------------------------
- 
-    $('#publish_modal').on('show.bs.modal', function(event) {
-        var html = '';
-        for(key in config.default_s3_buckets) {
-            html += _select_bucket_template({
-                name: key, 
-                bucket: config.default_s3_buckets[key]
-            });
-        }
-        $('#publish_bucket').html(html).val('staging');
+
+    $('#publish_button').click(function(event) {
+        $('#publish_modal').trigger('error_show', 'todo, not implemented');
     });
+ 
+     modal_init($('#publish_modal'))
+        .on('show.bs.modal', function(event) {
+            $(this).trigger('error_hide').trigger('progress_hide');
+
+            var html = '';
+            for(key in config.default_s3_buckets) {
+                html += _select_bucket_template({
+                    name: key, 
+                    bucket: config.default_s3_buckets[key]
+                });
+            }
+            $('#publish_bucket').html(html).val('staging');
+        });
     
 // ------------------------------------------------------------
 // run modal
@@ -320,12 +330,12 @@ $(function() {
                 .removeAttr('disabled');    
         })
         .on('show.bs.modal', function(event) {
-            $('#run_address').val('127.0.0.1:5000')
-                .closest('.form-group').removeClass('has-error');
             $(this)
                 .trigger('error_hide')
                 .trigger('progress_hide')
                 .trigger('reset');
+            $('#run_address').val('127.0.0.1:5000')
+                .closest('.form-group').removeClass('has-error');
          });      
         
     $('#run_button').click(function(event) {

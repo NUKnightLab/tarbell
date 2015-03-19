@@ -251,6 +251,9 @@
                 <h4 class="modal-title">Generate Project: <span class="project-name"></span></h4>
             </div>
             <div class="modal-body">
+                <p class="modal-error bg-danger">
+                    <span class="modal-msg text-danger"></span>
+                </p>
                 <form class='form-horizontal'>
                     <div class="form-group">
                         <label for="generate_dir" class="col-xs-3 control-label">Output Directory</label>
@@ -265,6 +268,14 @@
                 <button type="button" class="btn btn-default" id="generate_cancel_button" data-dismiss="modal">Cancel</button>
                 <button type="button" class="btn btn-success" id="generate_button">Generate</button>
             </div>
+            <div class="modal-progress" style="display: none;">
+                <div>
+                    <div>
+                        <i class="fa fa-3x fa-spinner fa-spin"></i>
+                        <p><span class="modal-msg"></span>...</p>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -278,6 +289,9 @@
                 <h4 class="modal-title">Publish Project: <span class="project-name"></span></h4>
             </div>
             <div class="modal-body">
+                <p class="modal-error bg-danger">
+                    <span class="modal-msg text-danger"></span>
+                </p>
                 <form class='form-horizontal'>
                     <div class="form-group">
                         <label for="publish_bucket" class="col-xs-2 control-label">Bucket</label>
@@ -292,6 +306,14 @@
             <div class="modal-footer">
                 <button type="button" class="btn btn-default" id="publish_done_button" data-dismiss="modal">Done</button>
                 <button type="button" class="btn btn-success" id="publish_button">Publish</button>
+            </div>
+            <div class="modal-progress" style="display: none;">
+                <div>
+                    <div>
+                        <i class="fa fa-3x fa-spinner fa-spin"></i>
+                        <p><span class="modal-msg"></span>...</p>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -388,7 +410,14 @@
                 <button type="button" class="btn btn-default" id="newproject_next_button">Next</button>
                 <button type="button" class="btn btn-primary" id="newproject_create_button" disabled="disabled">Create</button>
             </div>
-        </div>
+            <div class="modal-progress" style="display: none;">
+                <div>
+                    <div>
+                        <i class="fa fa-3x fa-spinner fa-spin"></i>
+                        <p><span class="modal-msg"></span>...</p>
+                    </div>
+                </div>
+            </div>
     </div>
 </div>
 
