@@ -28,6 +28,14 @@ modal_progress_hide = function(event) {
     $(this).find('.modal-progress').hide(); 
 };
 
+function modal_init($modal) {
+    return $modal
+        .on('error_show', modal_error_show)
+        .on('error_hide', modal_error_hide)
+        .on('progress_show', modal_progress_show)
+        .on('progress_hide', modal_progress_hide);
+}
+
 
 //
 // debug
@@ -302,11 +310,7 @@ $(function() {
 // run modal
 // ------------------------------------------------------------
 
-    $('#run_modal')
-        .on('error_show', modal_error_show)
-        .on('error_hide', modal_error_hide)
-        .on('progress_show', modal_progress_show)
-        .on('progress_hide', modal_progress_hide)        
+    modal_init($('#run_modal'))
         .on('reset', function(event) {
             $('#run_address').closest('.form-group').removeClass('has-error');
             
@@ -325,7 +329,7 @@ $(function() {
          });      
         
     $('#run_button').click(function(event) {
-        var $modal = $('#run_modal');
+        var $modal = $('#run_modal').trigger('error_hide');
                 
         var $address = $('#run_address');
         var address = $address.val().trim();
@@ -346,7 +350,7 @@ $(function() {
                 address: address
             }, 
             function(error) {
-                error_alert(error);
+                $modal.trigger('error_show', error);
             },
             function(data) {
                 window.open('http://'+address);
@@ -357,7 +361,6 @@ $(function() {
                     .removeAttr('disabled');
             },
             function() {
-                console.log('COMPLETE');
                 $modal.trigger('progress_hide');
             }
         );
@@ -366,7 +369,7 @@ $(function() {
     $('#run_stop_button').click(function(event) {
         ajax_get('/project/stop/', {}, 
             function(error) {
-                alert(error);   // temp
+                $modal.trigger('error_show', error);
             },
             function(data) {
                 $('#run_modal').trigger('reset');
@@ -374,9 +377,14 @@ $(function() {
         );
     });
         
+    //
+    // Common
+    //
+    
     $('#run_modal, #publish_modal').on('show.bs.modal', function(event) {
         var directory = $(event.relatedTarget).closest('tr').attr('data-project');
         $(this).data('data-project', directory);      
         $('.project-name').html(directory);
     });
+    
 });
