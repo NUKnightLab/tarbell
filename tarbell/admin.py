@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+"""
+This module provides a web-based GUI interface to tarbell.
+"""
 import traceback
 import os
 import json
@@ -13,19 +16,23 @@ class TarbellAdminSite:
     def __init__(self, settings,  quiet=False):
         self.settings = settings
         
-        self.p = None   
+        self.p = None
+
+        api = get_drive_api()       
+        self.credentials = json.loads(api.credentials.to_json())
         
         self.app = Flask(__name__)
         self.app.debug = True  # Always debug
         
-        self.app.add_url_rule('/', view_func=self.main)
-        
+        # Add routes
+        self.app.add_url_rule('/', view_func=self.main)        
         self.app.add_url_rule('/project/run/<project>/', view_func=self.run_server)
         self.app.add_url_rule('/project/stop/', view_func=self.stop_server)
         
-        api = get_drive_api()       
-        self.credentials = json.loads(api.credentials.to_json())
- 
+
+    #
+    # Main view
+    # 
      
     def main(self):
         project_list = []
@@ -36,9 +43,6 @@ class TarbellAdminSite:
             try:
                 filename, pathname, description = imp.find_module('tarbell_config', [project_path])
                 config = imp.load_module(directory, filename, pathname, description)
-                
-                print 'CONFIG'
-                print dir(config)
                 title = config.DEFAULT_CONTEXT.get("title", directory)
                 project_list.append({'directory': directory, 'title': title})
             except ImportError:
@@ -54,14 +58,13 @@ class TarbellAdminSite:
     #
     
     def _run_server(self, project_path):
+        print 'DEBUG', '_run_server'
         with ensure_project('serve', [], path=project_path) as site:
             site.app.run('0.0.0.0', port=5000, use_reloader=False)
  
     def run_server(self, project):
         print 'DEBUG', 'run_server'
         try:
-            #raise Exception('this does not really work yet')
-            
             project_path = os.path.join(
                 self.settings.config.get('projects_path'), project)
             
@@ -79,6 +82,7 @@ class TarbellAdminSite:
         try:
             if self.p:
                 self.p.terminate()
+                self.p = None
             return jsonify({})
         except Exception, e:
             traceback.print_exc()

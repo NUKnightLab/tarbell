@@ -456,6 +456,7 @@ def tarbell_admin(command, args):
     """Run the admin site"""
     with ensure_settings(command, args) as settings:
         # DEBUG
+        print 'CURRENT SETTINGS'
         import pprint
         pprint.pprint(settings.config)
         

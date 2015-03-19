@@ -1,7 +1,14 @@
+//
+// templates
+//
+
 var _s3_bucket_template = _.template($('#s3_bucket_template').html());
 var _select_bucket_template = _.template($('#select_bucket_template').html());
 var _error_alert_template = _.template($('#error_alert_template').html());
 
+//
+// debug
+//
 
 function debug() {
     if(console && console.log) {
@@ -29,8 +36,6 @@ function error_alert(message) {
 // ajax
 //
 
-function noop() {}
-
 function _ajax(url, type, data, on_error, on_success, on_complete) {
     var _error = '';
     
@@ -50,22 +55,24 @@ function _ajax(url, type, data, on_error, on_success, on_complete) {
             if(data.error) {
                 _error = data.error;
                 on_error(_error);
-            } else {
+            } else if (on_success) {
                 on_success(data);
             }
         },
         complete: function() {
-            on_complete(_error);
+            if(on_complete) {
+                on_complete(_error);
+            }
         }
     });
 }
 
 function ajax_get(url, data, on_error, on_success, on_complete) {
-    _ajax(url, 'GET', data, on_error, on_success || noop, on_complete || noop);
+    _ajax(url, 'GET', data, on_error, on_success, on_complete);
 }
 
 function ajax_post(url, data, on_error, on_success, on_complete) {
-    _ajax(url, 'POST', data, on_error, on_success || noop, on_complete || noop);
+    _ajax(url, 'POST', data, on_error, on_success, on_complete);
 }
 
 //
@@ -176,7 +183,7 @@ $(function() {
             }
         }
     });
-   
+       
     $('#newproject_next_button').click(function(event) {
         var $cur_pane = $('#newproject_modal .modal-body > div').filter(':visible');        
         var $next_pane = $cur_pane.next();
@@ -194,6 +201,17 @@ $(function() {
                 $('#newproject_create_button').removeAttr('disabled');  
             }
         }       
+    });
+    
+    $("#newproject_info_pane input[type='text']").change(function(event) {
+        console.log('change');
+        
+        if($('#newproject_info_name').val().trim()
+        && $('#newproject_info_title').val().trim()) {
+            $('#newproject_next_button').removeAttr('disabled');            
+        } else {
+            $('#newproject_next_button').attr('disabled', 'disabled');         
+        }  
     });
     
     $("input[name='newproject_spreadsheet']").click(function(event) {
@@ -226,9 +244,21 @@ $(function() {
         $('#newproject_modal .modal-body > div').hide();
         $('#newproject_info_pane').show();   
         
-        $('#newproject_back_button').attr('disabled', 'disabled'); 
-        $('#newproject_next_button').removeAttr('disabled'); 
+        $('#newproject_back_button, #newproject_next_button, #newproject_create_button')
+            .attr('disabled', 'disabled'); 
     });  
+ 
+// ------------------------------------------------------------
+// generate modal
+// ------------------------------------------------------------
+
+    $('#generate_button').click(function(event) {
+        // TODO
+    });
+      
+    $('#generate_modal').on('show.bs.modal', function(event) {
+        $('#generate_dir').val('').focus();
+    });
     
 // ------------------------------------------------------------
 // publish modal
