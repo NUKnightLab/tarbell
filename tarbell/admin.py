@@ -232,7 +232,7 @@ class TarbellAdminSite:
             
     def project_stop(self):
         try:
-            self.project_stop()
+            self._project_stop()
             return jsonify({})
         except Exception, e:
             traceback.print_exc()
