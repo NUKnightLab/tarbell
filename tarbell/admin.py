@@ -18,7 +18,8 @@ from flask import Flask, request, render_template, jsonify
 from tarbell import __VERSION__ as VERSION
 from .oauth import get_drive_api
 from .contextmanagers import ensure_project
-from .admin_utils import delete_dir, install_requirements, list_projects
+from .admin_utils import make_dir, delete_dir, install_requirements, \
+    load_project_config, list_projects, clean_suffix
 
 class TarbellAdminSite:
     def __init__(self, settings,  quiet=False):
@@ -49,6 +50,9 @@ class TarbellAdminSite:
         self.app.add_url_rule('/project/publish/', view_func=self.project_publish)
         
 
+    def _get_path(self, name):
+        return os.path.join(self.settings.config.get('projects_path'), name)
+        
     #
     # Main view
     # 
@@ -63,7 +67,7 @@ class TarbellAdminSite:
             project_list=project_list)
 
     #
-    # Utility
+    # Utility view
     #
     
     def exists(self):
@@ -132,13 +136,12 @@ class TarbellAdminSite:
                 except AttributeError:
                     name = url.split("/")[-1]   
                     print 'No name specified in blueprint.py, using "%s"' % name
-                
-                self.settings.config["project_templates"].append(
-                    {"name": name, "url": url})
+               
+                data = {"name": name, "url": url} 
+                self.settings.config["project_templates"].append(data)
                 self.settings.save()
 
-                return jsonify({"name": name, "url": url})
-
+                return jsonify(data)
             except ImportError:
                 raise Exception('No blueprint.py found')
             except sh.ErrorReturnCode_128, e:
@@ -176,16 +179,56 @@ class TarbellAdminSite:
             url = request.args.get('url')
             if not url:
                 raise Exception('Expected "url" parameter')
-                
+            
             name = url.split("/").pop()
             if not name:
                 raise Exception('Could not determine project name from url')
-      
+            name = clean_suffix(name, ".git")
+                        
             tempdir = tempfile.mkdtemp()
- 
-   
+            
+            print name, url, tempdir
+            
+            try:
+                testgit = sh.git.bake(_cwd=tempdir, _tty_in=True, _tty_out=False) # _err_to_out=True)
+                testclone = testgit.clone(url, '.', '--depth=1', '--bare')
+                print testclone
+                
+                print testgit.show("HEAD:tarbell_config.py")
+                                             
+                path = self._get_path(name)
+                print path
+                
+                make_dir(path)
+                
+                git = sh.git.bake(_cwd=path)
+                print git.clone(url, '.', _tty_in=True, _tty_out=False, _err_to_out=True)
+                print git.submodule.update('--init', '--recursive', _tty_in=True, _tty_out=False, _err_to_out=True)
 
-            raise Exception('Not implemented yet')
+                install_requirements(path)
+
+                # Get site, run hook
+                with ensure_project(None, None, path) as site:
+                    site.call_hook("install", site, git)
+                  
+                # Load new project config
+                config = load_project_config(path)
+                                 
+                return jsonify({
+                    'directory': name, 
+                    'title': config.DEFAULT_CONTEXT.get("title", name)
+                })
+            except sh.ErrorReturnCode_128, e:
+                if e.message.endswith('Device not configured\n'):
+                    raise Exception('Git tried to prompt for a username or password.' \
+                        + '  Tarbell doesn\'t support interactive sessions.' \
+                        + '  Please configure ssh key access to your Git repository.' \
+                        + '  (See https://help.github.com/articles/generating-ssh-keys/)')
+                else:
+                    raise Exception('Not a valid repository or Tarbell project')
+            finally:
+                delete_dir(tempdir)
+ 
         except Exception, e:
             traceback.print_exc()
             return jsonify({'error': str(e)})
@@ -203,8 +246,7 @@ class TarbellAdminSite:
             if not m:
                 raise Exception('Invalid "address" parameter')
 
-            project_path = os.path.join(
-                self.settings.config.get('projects_path'), project)
+            project_path = self._get_path(project)
             ip = m.group(1)
             port = m.group(2)
                        
@@ -253,10 +295,8 @@ class TarbellAdminSite:
         try:
             project = request.args.get('project')
             if not project:
-                raise Exception('Expected "project" parameter')
-            
-            project_path = os.path.join(
-                self.settings.config.get('projects_path'), project)
+                raise Exception('Expected "project" parameter')            
+            project_path = self._get_path(project)
                 
             output_path = request.args.get('path')
 

@@ -27,6 +27,7 @@ var _select_bucket_template = _.template($('#select_bucket_template').html());
 var _error_alert_template = _.template($('#error_alert_template').html());
 var _success_alert_template = _.template($('#success_alert_template').html());
 var _blueprint_template = _.template($('#blueprint_template').html());
+var _project_template = _.template($('#project_template').html());
 
 //
 // generic modal event handlers
@@ -293,6 +294,8 @@ $(function() {
 // ------------------------------------------------------------
 
     $('#project_install').click(function(event) {
+        alert_hide();
+
         var url = $('#project_url').val().trim();
         if(!url) {
             $(this).closest('.input-group').addClass('has-error');
@@ -307,7 +310,9 @@ $(function() {
                 error_alert(error);
             },
             function(data) {
-                console.log(data);
+                $('#projects_table tbody').append(_project_template(data));
+                $('#project_url').val('');
+                success_alert('Successfully installed project <strong>'+data.title+'</strong>');                               
             },
             function() {
                 progress_hide();

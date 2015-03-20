@@ -142,7 +142,7 @@
             </div>
         </form>
        
-        <table class="table">
+        <table class="table" id="projects_table">
             <thead>
                 <th class="col-xs-3">Directory</th>
                 <th class="col-xs-6">Title</th>
@@ -435,7 +435,7 @@
     </div>
 </div>
 
-<!-- underscore templates -->
+<!-- UNDERSCORE TEMPLATES -->
 
 <script type="text/template" id="s3_bucket_template">
 <div class="form-group">
@@ -470,7 +470,6 @@
 </div>
 </script>
 
-
 <script type="text/template" id="blueprint_template">
 <tr>
     <td><%= name %></td>
@@ -478,7 +477,32 @@
 </tr>
 </script>
 
-<!-- javascript -->
+<script type="text/template" id="project_template">
+<tr data-project="<%= directory %>">
+    <td><%= directory %></td>
+    <td><a role="button" class="project-title" title="Run this project" data-toggle="modal" data-target="#run_modal">
+        <%= title %></a>
+    </td>
+    <td class="actions nowrap">
+        <button class="btn btn-default project-details" title="Edit project details">
+            <i class="fa fa-lg fa-cog"></i>
+        </button>
+        <button class="btn btn-default project-update" title="Update the blueprint in this project">
+            <i class="fa fa-lg fa-refresh"></i>
+        </button>
+        <button class="btn btn-default project-generate" title="Generate static files for this project"
+             data-toggle="modal" data-target="#generate_modal">
+            <i class="fa fa-lg fa-magic"></i>
+        </button>
+        <button class="btn btn-default project-publish" title="Publish this project to a target"
+            data-toggle="modal" data-target="#publish_modal">
+            <i class="fa fa-lg fa-cloud-upload text-success"></i>
+        </button>
+    </td>
+</tr>
+</script>
+
+<!-- JAVASCRIPT -->
 
 <script type="text/javascript">
 

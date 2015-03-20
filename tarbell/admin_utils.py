@@ -15,10 +15,36 @@ import sh
 
 from .utils import puts
 
-def delete_dir(dir):
+def clean_suffix(string, suffix):
+    """If string endswith the suffix, remove it. Else leave it alone"""
+    suffix_len = len(suffix)
+
+    if len(string) < suffix_len:
+        # the string param was shorter than the suffix
+        raise ValueError("A suffix can not be bigger than string argument.")
+    if string.endswith(suffix):
+        # return from the beginning up to
+        # but not including the first letter
+        # in the suffix
+        return string[0:-suffix_len]   
+    else:
+        # leave unharmed
+        return string
+
+def make_dir(path):
+    """Make a directory or raise Exception"""
+    try:
+        os.mkdir(path)
+    except OSError, e:
+        if e.errno == 17:
+            raise Exception("Directory {0} already exists.".format(path))
+        else:
+            raise Exception("OSError {0}.".format(e))
+         
+def delete_dir(path):
     """Delete dir"""
     try:
-        shutil.rmtree(dir)  # delete directory
+        shutil.rmtree(path)
     except OSError as exc:
         if exc.errno != 2:  # code 2 - no such file or directory
             raise  # re-raise exception
@@ -48,7 +74,14 @@ def install_requirements(path, force=False):
             pass
 
     return True
-    
+ 
+ 
+def load_project_config(project_path):
+    """Load project tarbell config"""
+    filename, pathname, description = imp.find_module('tarbell_config', [project_path])
+    return imp.load_module(os.path.dirname(project_path), filename, pathname, description)
+
+                   
 def list_projects(projects_dir):
     """List projects"""
     projects_list = []
