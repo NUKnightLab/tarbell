@@ -25,6 +25,8 @@ $.fn.extend({
 var _s3_bucket_template = _.template($('#s3_bucket_template').html());
 var _select_bucket_template = _.template($('#select_bucket_template').html());
 var _error_alert_template = _.template($('#error_alert_template').html());
+var _success_alert_template = _.template($('#success_alert_template').html());
+var _blueprint_template = _.template($('#blueprint_template').html());
 
 //
 // generic modal event handlers
@@ -107,16 +109,29 @@ function debug() {
 }
 
 //
-// error
+// alerts
 //
 
+function alert_hide() {
+    $('div.tab-pane').find('div[role="alert"]').remove(); // all
+}
+
 function error_hide() {
-    var $tab = $('div.tab-pane').find('div[role="alert"]').remove();   
+    $('div.tab-pane').find('div[role="alert"].alert-danger').remove();   
 }
 
 function error_alert(message) {
     error_hide();
     $('div.tab-pane.active').prepend(_error_alert_template({message: message}));    
+}
+
+function success_hide() {
+    $('div.tab-pane').find('div[role="alert"].alert-success').remove();   
+}
+
+function success_alert(message) {
+    success_hide();
+    $('div.tab-pane.active').prepend(_success_alert_template({message: message}));    
 }
 
 //
@@ -209,7 +224,7 @@ $(function() {
     // Clear alerts/states when switching from tab to tab
     //
     $('a[data-toggle="tab"]').on('hide.bs.tab', function(event) {      
-        error_hide();
+        alert_hide();
         $('.form-group, .input-group').removeClass('has-error');        
         $('#blueprint_url, #project_url').val('');
     });
@@ -248,13 +263,15 @@ $(function() {
 // ------------------------------------------------------------
   
     $('#blueprint_install').click(function(event) {
+        alert_hide();
+        
         var url = $('#blueprint_url').val().trim();
         if(!url) {
             $(this).closest('.input-group').addClass('has-error');
             return;
         }
         
-        $(this).closest('.input-group').removeClass('has-error');        
+        $(this).closest('.input-group').removeClass('has-error');           
         progress_show('Installing blueprint'); 
              
         ajax_get('/blueprint/install/', {url: url},
@@ -262,7 +279,9 @@ $(function() {
                 error_alert(error);
             },
             function(data) {
-                console.log(data);
+                $('#blueprints_table tbody').append(_blueprint_template(data));
+                $('#blueprint_url').val('');
+                success_alert('Successfully installed blueprint <strong>'+data.name+'</strong>');                               
             },
             function() {
                 progress_hide();

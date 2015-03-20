@@ -107,7 +107,7 @@
             </div>
         </form>
 
-        <table class="table">
+        <table class="table" id="blueprints_table">
             <thead>
                 <th>Name</th>
                 <th>URL</th>
@@ -461,6 +461,21 @@
     <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
     <%= message %>
 </div>
+</script>
+
+<script type="text/template" id="success_alert_template">
+<div class="alert alert-success alert-dismissible" role="alert">
+    <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+    <%= message %>
+</div>
+</script>
+
+
+<script type="text/template" id="blueprint_template">
+<tr>
+    <td><%= name %></td>
+    <td><a href="<%= url %>" target="_blank"><%= url %></a></td>
+</tr>
 </script>
 
 <!-- javascript -->
