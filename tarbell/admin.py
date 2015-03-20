@@ -52,7 +52,23 @@ class TarbellAdminSite:
 
     def _get_path(self, name):
         return os.path.join(self.settings.config.get('projects_path'), name)
-        
+      
+    def _request_get(self, *keys):
+        """Verify existence of request data and return values"""
+        if request.method == 'POST':
+            obj = request.form
+        else:
+            obj = request.args
+        values = []
+        for k in keys:
+            v = obj.get(k)
+            if not v:
+                raise Exception('Expected "%s" parameter' % k)
+            values.append(v)
+        if len(values) > 1:
+            return values
+        return values[0]
+          
     #
     # Main view
     # 
@@ -67,15 +83,13 @@ class TarbellAdminSite:
             project_list=project_list)
 
     #
-    # Utility view
+    # Utility
     #
     
     def exists(self):
         """Check if a path exists"""
         try:
-            path = request.args.get('path')
-            if not path:
-                raise Exception('Expected "path" parameter')           
+            path = self._request_get('path')
             return jsonify({'exists': os.path.exists(path)})            
         except Exception, e:
             traceback.print_exc()
@@ -100,14 +114,11 @@ class TarbellAdminSite:
     def blueprint_install(self):
         """
         Install blueprint
-        test URL: https://github.com/hbillings/tarbell-tutorial-template
-        
+        test URL: https://github.com/jywsn/test-blueprint      
         """
         try:
-            url = request.args.get('url')
-            if not url:
-                raise Exception('Expected "url" parameter')
-            
+            url = self._request_get('url')
+             
             matches = [b for b in self.settings.config["project_templates"] if b.get("url") == url]
             if matches:
                 raise Exception('Blueprint already exists.  Nothing to do.')
@@ -164,21 +175,21 @@ class TarbellAdminSite:
     #
 
     def _project_run(self, project_path, ip, port):
-        print 'DEBUG', '_project_run', ip, port
         with ensure_project('serve', [], path=project_path) as site:
             site.app.run(ip, port=port, use_reloader=False)
  
     def _project_stop(self):
-        print 'DEBUG', '_project_stop'
         if self.p:
             self.p.terminate()
             self.p = None
     
     def project_install(self):
+        """
+        Install project
+        test URL: https://github.com/jywsn/testproject
+        """
         try:
-            url = request.args.get('url')
-            if not url:
-                raise Exception('Expected "url" parameter')
+            url = self._request_get('url')
             
             name = url.split("/").pop()
             if not name:
@@ -235,13 +246,8 @@ class TarbellAdminSite:
            
     def project_run(self):
         try:
-            project = request.args.get('project')
-            if not project:
-                raise Exception('Expected "project" parameter')
-              
-            address = request.args.get('address')
-            if not address:
-                raise Exception('Expected "address" parameter')
+            project, address = self._request_get('project', 'address')
+
             m = re.match(r'([\w.]+):(\d+)', address)   
             if not m:
                 raise Exception('Invalid "address" parameter')
@@ -259,8 +265,8 @@ class TarbellAdminSite:
                 time.sleep(2)
                 
                 try:
-                    print 'Waiting for server...'
-                    r = requests.get('http://127.0.0.1:5000', timeout=3)
+                    print 'Waiting for server...', 'http://'+address
+                    r = requests.get('http://'+address, timeout=3)
                 
                     if r.status_code == requests.codes.ok:
                         return jsonify({})                       
@@ -282,6 +288,8 @@ class TarbellAdminSite:
     
     def project_update(self):
         try:
+            project = self._request_get('project')
+
             raise Exception('Not implemented yet')
         except Exception, e:
             traceback.print_exc()
@@ -291,11 +299,11 @@ class TarbellAdminSite:
     def project_generate(self):
         """
         Generate static files
+        Assumes GUI has already confirmed overwrite (if applicable)
         """
         try:
-            project = request.args.get('project')
-            if not project:
-                raise Exception('Expected "project" parameter')            
+            project = self._request_get('project')
+   
             project_path = self._get_path(project)
                 
             output_path = request.args.get('path')
@@ -317,6 +325,8 @@ class TarbellAdminSite:
 
     def project_publish(self):
         try:
+            project, bucket = self._request_get('project', 'bucket')
+
             raise Exception('Not implemented yet')
         except Exception, e:
             traceback.print_exc()

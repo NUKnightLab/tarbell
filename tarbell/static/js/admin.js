@@ -370,8 +370,6 @@ $(function() {
     });
     
     $("#newproject_info_pane input[type='text']").change(function(event) {
-        console.log('change');
-        
         if($('#newproject_info_name').val().trim()
         && $('#newproject_info_title').val().trim()) {
             $('#newproject_next_button').enable();          
@@ -486,7 +484,13 @@ $(function() {
             .trigger('error_hide')
             .trigger('progress_show', 'Publishing project');
         
-        ajax_get('/project/publish/', {},
+        var project = $modal.data('data-project');
+        var bucket = $('#publish_bucket').val();
+        
+        ajax_get('/project/publish/', {
+                project: project,
+                bucket: bucket
+            },
             function(error) {
                 $modal.trigger('error_show', error);
             },
