@@ -100,7 +100,7 @@
                     <div class="input-group">
                         <input type="text" class="form-control" id="blueprint_url" placeholder="Blueprint URL, e.g. https://github.com/username/project" />
                         <div class="input-group-btn">
-                            <button type="button" class="btn btn-default">Install Blueprint</button>
+                            <button type="button" class="btn btn-default" id="blueprint_install">Install Blueprint</button>
                         </div>
                     </div>
                 </div>
@@ -133,9 +133,9 @@
             <div class="row">
                 <div class="col-xs-12">
                     <div class="input-group">
-                        <input type="text" class="form-control" id="blueprint_url" placeholder="URL to project repository" />
+                        <input type="text" class="form-control" id="project_url" placeholder="URL to project repository" />
                         <div class="input-group-btn">
-                            <button type="button" class="btn btn-default">Install Project</button>
+                            <button type="button" class="btn btn-default" id="project_install">Install Project</button>
                         </div>
                     </div>
                 </div>
@@ -259,7 +259,7 @@
                         <label for="generate_dir" class="col-xs-3 control-label">Output Directory</label>
                         <div class="col-xs-9">
                             <input type="text" class="form-control" id="generate_dir" value=""
-                                placeholder="default = temporary directory">
+                                placeholder="leave blank to use a temporary directory">
                         </div>
                     </div>
                 </form>

@@ -147,17 +147,18 @@ function config_remove_bucket(target) {
     $(target).closest('.form-group').remove();
 }
 
-//
-// project
-//
 
 $(function() {
-    // Clear error alerts as we switch from tab to tab
-    $('a[data-toggle="tab"]').on('hide.bs.tab', function(event) {
-        error_hide();
-    });
 
-    
+    //
+    // Clear alerts/states when switching from tab to tab
+    //
+    $('a[data-toggle="tab"]').on('hide.bs.tab', function(event) {      
+        error_hide();
+        $('.form-group, .input-group').removeClass('has-error');        
+        $('#blueprint_url, #project_url').val('');
+    });
+     
 // ------------------------------------------------------------
 // configuration tab
 // ------------------------------------------------------------
@@ -178,18 +179,65 @@ $(function() {
     });
  
 // ------------------------------------------------------------
+// blueprints
+// ------------------------------------------------------------
+  
+    $('#blueprint_install').click(function(event) {
+        var url = $('#blueprint_url').val().trim();
+        if(!url) {
+            $(this).closest('.input-group').addClass('has-error');
+            return;
+        }
+        
+        $(this).closest('.input-group').removeClass('has-error');        
+        progress_show('Installing blueprint'); 
+             
+        ajax_get('/blueprint/install', {url: url},
+            function(error) {
+                error_alert(error);
+            },
+            function(data) {
+                console.log(data);
+            },
+            function() {
+                progress_hide();
+            });
+    });
+    
+// ------------------------------------------------------------
 // projects tab
 // ------------------------------------------------------------
 
+    $('#project_install').click(function(event) {
+        var url = $('#project_url').val().trim();
+        if(!url) {
+            $(this).closest('.input-group').addClass('has-error');
+            return;
+        }
+        
+        $(this).closest('.input-group').removeClass('has-error');
+        progress_show('Installing project'); 
+             
+        ajax_get('/project/install', {url: url},
+            function(error) {
+                error_alert(error);
+            },
+            function(data) {
+                console.log(data);
+            },
+            function() {
+                progress_hide();
+            });
+    });
+
     $('.project-details').click(function(event) {
-        console.log('details');    
+        error_alert('not implemented');
     });
     
     $('.project-update').click(function(event) {
-        console.log('update');    
+        error_alert('not implemented');
     });
     
-
 // ------------------------------------------------------------
 // newproject modal
 // ------------------------------------------------------------
@@ -284,7 +332,20 @@ $(function() {
 // ------------------------------------------------------------
 
     $('#generate_button').click(function(event) {
-        $('#generate_modal').trigger('error_show', 'todo, not implemented');
+        var $modal = $('#generate_modal')
+            .trigger('error_hide')
+            .trigger('progress_show', 'Generating project');
+        
+        ajax_get('/project/generate/', {},
+            function(error) {
+                $modal.trigger('error_show', error);
+            },
+            function(data) {
+                // TODO 
+            },
+            function() {
+                $modal.trigger('progress_hide');
+            });
     });
       
     modal_init($('#generate_modal'))
@@ -298,11 +359,24 @@ $(function() {
 // publish modal
 // ------------------------------------------------------------
 
-    $('#publish_button').click(function(event) {
-        $('#publish_modal').trigger('error_show', 'todo, not implemented');
+    $('#publish_button').click(function(event) {   
+        var $modal = $('#publish_modal')
+            .trigger('error_hide')
+            .trigger('progress_show', 'Publishing project');
+        
+        ajax_get('/project/publish/', {},
+            function(error) {
+                $modal.trigger('error_show', error);
+            },
+            function(data) {
+                // TODO 
+            },
+            function() {
+                $modal.trigger('progress_hide');
+            });
     });
  
-     modal_init($('#publish_modal'))
+    modal_init($('#publish_modal'))
         .on('show.bs.modal', function(event) {
             $(this).trigger('error_hide').trigger('progress_hide');
 
