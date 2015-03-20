@@ -14,7 +14,7 @@ from clint.textui import colored, puts
 
 from .app import TarbellSite
 from .settings import Settings
-from .utils import show_error
+from .utils import show_error, is_werkzeug_process
 
 class EnsureSettings():
     """Ensure the user has a Tarbell configuration."""
@@ -56,6 +56,13 @@ class EnsureProject():
     def __exit__(self, type, value, traceback):
         pass
 
+    def _error(self, error):
+        if is_werkzeug_process():
+            raise Exception(error)
+        else:
+            show_error(error)
+            sys.exit(1)
+       
     def ensure_site(self):
         if not self.path:
             path = os.getcwd()
@@ -63,10 +70,9 @@ class EnsureProject():
             path = self.path
 
         if path is "/":
-            show_error(("The current directory is not part of a Tarbell "
-                        "project"))
-            sys.exit(1)
-
+            self._error(("The current directory is not part of a Tarbell "
+                         "project"))
+                    
         if not os.path.exists(os.path.join(path, 'tarbell_config.py')):
             self.path = os.path.realpath(os.path.join(path, '..'))
             return self.ensure_site()

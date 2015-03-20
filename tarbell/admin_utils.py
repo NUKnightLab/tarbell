@@ -9,6 +9,7 @@ This module provides utilities for Tarbell cli and admin.
 
 import os
 import sys
+import imp
 import shutil
 import sh
 
@@ -48,6 +49,18 @@ def install_requirements(path, force=False):
 
     return True
     
-def list_projects():
-    """TODO"""
-    pass
+def list_projects(projects_dir):
+    """List projects"""
+    projects_list = []
+
+    for directory in os.listdir(projects_dir):
+        project_path = os.path.join(projects_dir, directory)
+        try:
+            filename, pathname, description = imp.find_module('tarbell_config', [project_path])
+            config = imp.load_module(directory, filename, pathname, description)
+            title = config.DEFAULT_CONTEXT.get("title", directory)
+            projects_list.append({'directory': directory, 'title': title})
+        except ImportError:
+            pass
+    
+    return projects_list

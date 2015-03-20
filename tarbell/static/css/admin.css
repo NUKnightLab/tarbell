@@ -1,5 +1,6 @@
 body {
     padding-top: 20px;
+    margin-bottom: 50px; /* for sticky footer */
 }
 
 .tab-pane {
@@ -19,6 +20,18 @@ textarea {
     resize: none;
 }
 
+#footer {
+   position:fixed;
+   left:0px;
+   bottom:0px;
+   height:40px;
+   width:100%;
+   background:#efefef;
+   padding: 4px 8px;
+   line-height: 32px;
+   font-size: 0.9em;
+}
+
 /*  modal error panel
 */
 
@@ -26,6 +39,26 @@ textarea {
     display: inline-block; 
     margin: 4px 6px;
 }
+
+/*  modal confirm panel 
+*/
+.modal-confirm {
+    position:absolute;
+    top: 0;
+    left:0;
+    bottom: 0;
+    right: 0;
+    -webkit-border-radius: 6px;
+    -moz-border-radius: 6px;
+    border-radius: 6px;
+    background-color: #fff;
+    opacity: 0.85;
+    z-index: 1001;
+}
+.modal-confirm > div {display: table;width: 100%;height: 100%;}
+.modal-confirm > div > div {display: table-cell;text-align: center;vertical-align: middle;}
+.modal-confirm button {margin-left: 8px;margin-right: 8px;}
+
 
 /*  modal progress panel 
 */
@@ -43,20 +76,9 @@ textarea {
     opacity: 0.85;
     z-index: 1000;
 }
-.modal-progress > div {
-    display: table;
-    width: 100%;
-    height: 100%;
-}
-.modal-progress > div > div {
-    display: table-cell;
-    text-align: center;
-    vertical-align: middle;
-}
-.modal-progress i {
-    margin-top: 10px;
-    margin-bottom: 10px;
-}
+.modal-progress > div {display: table;width: 100%;height: 100%;}
+.modal-progress > div > div {display: table-cell;text-align: center;vertical-align: middle;}
+.modal-progress i {margin-top: 10px;margin-bottom: 10px;}
 
 /*  collapse
 */

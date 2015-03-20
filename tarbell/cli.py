@@ -454,6 +454,8 @@ def tarbell_unpublish(command, args):
 
 def tarbell_admin(command, args):
     """Run the admin site"""
+    
+    print 'is_werkzeug_process', is_werkzeug_process()
     with ensure_settings(command, args) as settings:
         # DEBUG
         print 'CURRENT SETTINGS'

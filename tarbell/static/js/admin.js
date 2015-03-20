@@ -1,4 +1,24 @@
 //
+// extend jquery
+//
+
+(function($) {
+
+$.fn.extend({
+    // enable UI element
+    enable: function() {
+        return this.removeAttr('disabled');
+    },
+    // disable UI element
+    disable: function() {
+        return this.attr('disabled', 'disabled'); 
+    }
+});
+
+})(jQuery);
+
+
+//
 // templates
 //
 
@@ -19,6 +39,17 @@ modal_error_hide = function(event, msg) {
     $(this).find('.modal-error').hide();         
 };
 
+modal_success_show = function(event, msg) {
+    if(msg) {
+        $(this).find('.modal-success .modal-msg').html(msg);
+    }
+    $(this).find('.modal-success').show();    
+};
+
+modal_success_hide = function(event) {
+    $(this).find('.modal-success').hide();         
+};
+
 modal_progress_show = function(event, msg) {
     $(this).find('.modal-progress .modal-msg').html(msg);
     $(this).find('.modal-progress').show();    
@@ -28,12 +59,37 @@ modal_progress_hide = function(event) {
     $(this).find('.modal-progress').hide(); 
 };
 
+modal_confirm_show = function(event, msg, callback) { 
+    console.log('modal_confirm_show');
+       
+    var $panel = $(this).find('.modal-confirm');
+    console.log(callback);
+    
+    $panel.find('.modal-msg').html(msg);
+    
+    $panel.find('.btn').bind('click.confirm', function(event) {
+        $(this).unbind('click.confirm'); 
+        $panel.hide();         
+        callback($(this).hasClass('btn-primary'));
+    });
+    
+    $panel.show();    
+};
+
+modal_confirm_hide = function(event) {
+    $(this).find('.modal-confirm').hide(); 
+};
+
 function modal_init($modal) {
     return $modal
         .on('error_show', modal_error_show)
         .on('error_hide', modal_error_hide)
+        .on('success_show', modal_success_show)
+        .on('success_hide', modal_success_hide)
         .on('progress_show', modal_progress_show)
-        .on('progress_hide', modal_progress_hide);
+        .on('progress_hide', modal_progress_hide)
+        .on('confirm_show', modal_confirm_show)
+        .on('confirm_hide', modal_confirm_hide);
 }
 
 
@@ -61,6 +117,19 @@ function error_hide() {
 function error_alert(message) {
     error_hide();
     $('div.tab-pane.active').prepend(_error_alert_template({message: message}));    
+}
+
+//
+// progress
+//
+
+function progress_show(msg) {
+    $('#progress_modal .modal-msg').html(msg);
+    $('#progress_modal').modal('show');
+}
+
+function progress_hide() {
+    $('#progress_modal').modal('hide');
 }
 
 //
@@ -107,30 +176,16 @@ function ajax_post(url, data, on_error, on_success, on_complete) {
 }
 
 //
-// modals
-//
-
-function progress_show(msg) {
-    $('#progress_modal .modal-msg').html(msg);
-    $('#progress_modal').modal('show');
-}
-
-function progress_hide() {
-    $('#progress_modal').modal('hide');
-}
-
-
-//
 // config
 //
 
 function config_dirty() {
-    $('#config_save').removeAttr('disabled');
+    $('#config_save').enable();
 }
 
 function config_disable_bucket(target) {
     var $group = $(target).closest('.form-group');
-    $group.find('input').attr('disabled', 'disabled');
+    $group.find('input').disable();
     $group.find('.config-remove-bucket').hide();
     $group.find('.config-add-bucket').show();
     config_dirty();
@@ -138,7 +193,7 @@ function config_disable_bucket(target) {
 
 function config_enable_bucket(target) {
     var $group = $(target).closest('.form-group');
-    $group.find('input').removeAttr('disabled');
+    $group.find('input').enable();
     $group.find('.config-add-bucket').hide();
     $group.find('.config-remove-bucket').show();
 }
@@ -175,7 +230,17 @@ $(function() {
                
     $('#config_save').click(function(event) {
          progress_show('Saving configuration');
-        // TODO: save configuration
+         
+         ajax_get('/configuration/save/', {},// TODO: add data
+            function(error) {
+                error_alert(error);
+            },
+            function(data) {
+                // TODO: update cached config
+            },
+            function() {
+                progress_hide();
+            });
     });
  
 // ------------------------------------------------------------
@@ -192,7 +257,7 @@ $(function() {
         $(this).closest('.input-group').removeClass('has-error');        
         progress_show('Installing blueprint'); 
              
-        ajax_get('/blueprint/install', {url: url},
+        ajax_get('/blueprint/install/', {url: url},
             function(error) {
                 error_alert(error);
             },
@@ -249,13 +314,14 @@ $(function() {
         if($prev_pane.length) {
             $cur_pane.hide();
             $prev_pane.show();
-            $('#newproject_next_button').removeAttr('disabled');
-            $('#newproject_create_button').attr('disabled', 'disabled'); 
+            
+            $('#newproject_next_button').enable();
+            $('#newproject_create_button').disable();
             
             if($prev_pane.prev().length) {
-                $('#newproject_back_button').removeAttr('disabled');  
+                $('#newproject_back_button').enable(); 
             } else {
-                $('#newproject_back_button').attr('disabled', 'disabled');  
+                $('#newproject_back_button').disable(); 
             }
         }
     });
@@ -267,14 +333,14 @@ $(function() {
         if($next_pane.length) {
             $cur_pane.hide();
             $next_pane.show();
-            $('#newproject_back_button').removeAttr('disabled');
+            $('#newproject_back_button').enable();
            
             if($next_pane.next().length) {
-                $('#newproject_next_button').removeAttr('disabled');  
-                $('#newproject_create_button').attr('disabled', 'disabled');   
+                $('#newproject_next_button').enable();
+                $('#newproject_create_button').disable();  
             } else {
-                $('#newproject_next_button').attr('disabled', 'disabled');  
-                $('#newproject_create_button').removeAttr('disabled');  
+                $('#newproject_next_button').disable();  
+                $('#newproject_create_button').enable();
             }
         }       
     });
@@ -284,9 +350,9 @@ $(function() {
         
         if($('#newproject_info_name').val().trim()
         && $('#newproject_info_title').val().trim()) {
-            $('#newproject_next_button').removeAttr('disabled');            
+            $('#newproject_next_button').enable();          
         } else {
-            $('#newproject_next_button').attr('disabled', 'disabled');         
+            $('#newproject_next_button').disable();        
         }  
     });
     
@@ -324,35 +390,67 @@ $(function() {
             $('#newproject_info_pane').show();   
         
             $('#newproject_back_button, #newproject_next_button, #newproject_create_button')
-                .attr('disabled', 'disabled'); 
+                .disable(); 
         });  
  
 // ------------------------------------------------------------
 // generate modal
 // ------------------------------------------------------------
-
+   
     $('#generate_button').click(function(event) {
         var $modal = $('#generate_modal')
-            .trigger('error_hide')
-            .trigger('progress_show', 'Generating project');
+            .trigger('error_hide').trigger('success_hide');
+            
+        var project = $modal.data('data-project');
+        var path = $('#generate_path').val().trim();
         
-        ajax_get('/project/generate/', {},
-            function(error) {
-                $modal.trigger('error_show', error);
-            },
-            function(data) {
-                // TODO 
-            },
-            function() {
-                $modal.trigger('progress_hide');
-            });
+        if(path) {
+            ajax_get('/exists/', {path: path},
+                function(error) {
+                    $modal.trigger('error_show', error);    
+                },
+                function(data) {
+                    if(data.exists) {
+                        $modal.trigger('confirm_show', ['Overwrite existing directory?', 
+                            function(yes) {
+                                if(yes) {
+                                    $modal.trigger('generate', [project, path]);  
+                                }
+                            }
+                        ]);
+                    } else {
+                        $modal.trigger('generate', [project, path]);
+                    }
+                });
+        } else {
+            $modal.trigger('generate', [project, path]);        
+        }
     });
       
     modal_init($('#generate_modal'))
         .on('show.bs.modal', function(event) {
-            $(this).trigger('error_hide').trigger('progress_hide');
+            $(this)
+                .trigger('error_hide')
+                .trigger('success_hide')
+                .trigger('progress_hide');                           
+            $('#generate_path').val('').focus();
+        })
+        .on('generate', function(event, project, path) {
+            var $modal = $(this).trigger('progress_show', 'Generating project');
             
-            $('#generate_dir').val('').focus();
+            ajax_get('/project/generate/', {
+                    project: project,
+                    path: path
+                },
+                function(error) {
+                    $modal.trigger('error_show', error);
+                },
+                function(data) {
+                    $modal.trigger('success_show', 'Static files generated in '+data.path);
+                },
+                function() {
+                    $modal.trigger('progress_hide');
+                });
         });
     
 // ------------------------------------------------------------
@@ -398,10 +496,8 @@ $(function() {
         .on('reset', function(event) {
             $('#run_address').closest('.form-group').removeClass('has-error');
             
-            $('#run_stop_button')
-                .attr('disabled', 'disabled');
-            $('#run_address, #run_done_button, #run_button')
-                .removeAttr('disabled');    
+            $('#run_stop_button').disable();
+            $('#run_address, #run_done_button, #run_button').enable();   
         })
         .on('show.bs.modal', function(event) {
             $(this)
@@ -414,22 +510,19 @@ $(function() {
         
     $('#run_button').click(function(event) {
         var $modal = $('#run_modal').trigger('error_hide');
-                
+        var project = $modal.data('data-project');
+               
         var $address = $('#run_address');
         var address = $address.val().trim();
         if(!address) {
-            $address.focus()
-                .closest('.form-group').addClass('has-error');
+            $address.focus().closest('.form-group').addClass('has-error');
             return;
-        }       
+        }
+               
         $address.closest('.form-group').removeClass('has-error');
-        
-        var project = $('#run_modal').data('data-project');
-    
         $modal.trigger('progress_show', 'Starting preview server');
         
-        ajax_get('/project/run/', 
-            {
+        ajax_get('/project/run/', {
                 project: project,
                 address: address
             }, 
@@ -439,10 +532,8 @@ $(function() {
             function(data) {
                 window.open('http://'+address);
                 
-                $('#run_address, #run_done_button, #run_button')
-                    .attr('disabled', 'disabled');
-                $('#run_stop_button')
-                    .removeAttr('disabled');
+                $('#run_address, #run_done_button, #run_button').disable();
+                $('#run_stop_button').enable();
             },
             function() {
                 $modal.trigger('progress_hide');
@@ -465,7 +556,7 @@ $(function() {
     // Common
     //
     
-    $('#run_modal, #publish_modal').on('show.bs.modal', function(event) {
+    $('#run_modal, #generate_modal, #publish_modal').on('show.bs.modal', function(event) {
         var directory = $(event.relatedTarget).closest('tr').attr('data-project');
         $(this).data('data-project', directory);      
         $('.project-name').html(directory);

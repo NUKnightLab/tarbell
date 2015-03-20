@@ -16,11 +16,9 @@ import tempfile
 from flask import Flask, request, render_template, jsonify
 
 from tarbell import __VERSION__ as VERSION
-
 from .oauth import get_drive_api
 from .contextmanagers import ensure_project
-
-from .admin_utils import delete_dir, install_requirements
+from .admin_utils import delete_dir, install_requirements, list_projects
 
 class TarbellAdminSite:
     def __init__(self, settings,  quiet=False):
@@ -37,6 +35,10 @@ class TarbellAdminSite:
         # Add routes
         self.app.add_url_rule('/', view_func=self.main)   
 
+        self.app.add_url_rule('/exists/', view_func=self.exists)
+        
+        self.app.add_url_rule('/configuration/save/', view_func=self.configuration_save)   
+
         self.app.add_url_rule('/blueprint/install/', view_func=self.blueprint_install)
              
         self.app.add_url_rule('/project/install/', view_func=self.project_install)
@@ -52,24 +54,41 @@ class TarbellAdminSite:
     # 
      
     def main(self):
-        project_list = []
-        
-        projects_path = self.settings.config.get('projects_path')
-        for directory in os.listdir(projects_path):
-            project_path = os.path.join(projects_path, directory)
-            try:
-                filename, pathname, description = imp.find_module('tarbell_config', [project_path])
-                config = imp.load_module(directory, filename, pathname, description)
-                title = config.DEFAULT_CONTEXT.get("title", directory)
-                project_list.append({'directory': directory, 'title': title})
-            except ImportError:
-                pass
-         
+        project_list = list_projects(self.settings.config.get('projects_path'))
+
         return render_template('admin.html', 
+            version=VERSION,
             config=self.settings.config, 
             credentials=self.credentials,
             project_list=project_list)
 
+    #
+    # Utility
+    #
+    
+    def exists(self):
+        """Check if a path exists"""
+        try:
+            path = request.args.get('path')
+            if not path:
+                raise Exception('Expected "path" parameter')           
+            return jsonify({'exists': os.path.exists(path)})            
+        except Exception, e:
+            traceback.print_exc()
+            return jsonify({'error': str(e)})
+
+
+    #
+    # Configuration
+    #
+    
+    def configuration_save(self):
+        try:
+            raise Exception('Not implemented yet')
+        except Exception, e:
+            traceback.print_exc()
+            return jsonify({'error': str(e)})
+            
     #
     # Blueprints
     #
@@ -154,13 +173,24 @@ class TarbellAdminSite:
     
     def project_install(self):
         try:
+            url = request.args.get('url')
+            if not url:
+                raise Exception('Expected "url" parameter')
+                
+            name = url.split("/").pop()
+            if not name:
+                raise Exception('Could not determine project name from url')
+      
+            tempdir = tempfile.mkdtemp()
+ 
+   
+
             raise Exception('Not implemented yet')
         except Exception, e:
             traceback.print_exc()
             return jsonify({'error': str(e)})
            
     def project_run(self):
-        print 'DEBUG', 'run_server'
         try:
             project = request.args.get('project')
             if not project:
@@ -201,7 +231,6 @@ class TarbellAdminSite:
             return jsonify({'error': str(e)})
             
     def project_stop(self):
-        print 'DEBUG', 'project_stop'
         try:
             self.project_stop()
             return jsonify({})
@@ -215,10 +244,33 @@ class TarbellAdminSite:
         except Exception, e:
             traceback.print_exc()
             return jsonify({'error': str(e)})
-            
+      
+                  
     def project_generate(self):
+        """
+        Generate static files
+        """
         try:
-            raise Exception('Not implemented yet')
+            project = request.args.get('project')
+            if not project:
+                raise Exception('Expected "project" parameter')
+            
+            project_path = os.path.join(
+                self.settings.config.get('projects_path'), project)
+                
+            output_path = request.args.get('path')
+
+            with ensure_project(None, None, path=project_path) as site:                                
+                if not output_path:
+                    output_path = tempfile.mkdtemp(prefix="{0}-".format(site.project.__name__))
+                
+                if os.path.exists(output_path):
+                    delete_dir(output_path)
+                    
+                site.generate_static_site(output_path, None)
+                site.call_hook("generate", site, output_path, True)
+     
+            return jsonify({'path': output_path})           
         except Exception, e:
             traceback.print_exc()
             return jsonify({'error': str(e)})
