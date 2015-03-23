@@ -20,8 +20,6 @@ import socket
 import sys
 import tempfile
 
-from apiclient import errors
-from apiclient.http import MediaFileUpload as _MediaFileUpload
 from clint import arguments
 from clint.textui import colored
 
@@ -32,17 +30,16 @@ if __name__ == "__main__" and __package__ is None:
     __package__ = "tarbell.cli"
 
 from .admin import TarbellAdminSite
-from .admin_utils import clean_suffix, delete_dir, install_requirements, \
-    install_project, install_blueprint
+from .admin_utils import make_dir, delete_dir, install_requirements, \
+    install_project, install_blueprint, create_project
 
-from .app import pprint_lines, process_xlsx, copy_global_values
 from .oauth import get_drive_api
 from .contextmanagers import ensure_settings, ensure_project
 from .configure import tarbell_configure
 from .s3 import S3Url, S3Sync
 from .settings import Settings
 from .utils import list_get, split_sentences, show_error
-from .utils import puts, is_werkzeug_process
+from .utils import puts, is_werkzeug_process, clean_suffix
 
 # Set args
 args = arguments.Args()
@@ -164,13 +161,17 @@ def tarbell_install(command, args):
         project_path = _get_path(clean_suffix(project_name, ".git"), settings)
     
         try:
-            install_project(project_url, project_path, command, args)
+            git = install_project(project_url, project_path)
             puts("\n- Done installing project in {0}".format(colored.yellow(project_path)))
+            
+            with ensure_project(command, args, project_path) as site:
+                site.call_hook("install", site, git)
         except Exception, e:
             show_error(str(e))
 
+
 def tarbell_install_blueprint(command, args):
-    """Install a project template."""
+    """Install a project blueprint."""
     with ensure_settings(command, args) as settings:
         template_url = args.get(0)
     
@@ -179,6 +180,7 @@ def tarbell_install_blueprint(command, args):
             puts("\n+ Added new project template: {0}".format(colored.yellow(data['name'])))
         except Exception, e:
             show_error(str(e))    
+            
             
 def tarbell_list(command, args):
     """List tarbell projects."""
@@ -224,6 +226,7 @@ def tarbell_list(command, args):
                 ))
         else:
             puts("No projects found")
+
 
 def tarbell_list_templates(command, args):
     with ensure_settings(command, args) as settings:
@@ -301,14 +304,36 @@ def tarbell_publish(command, args):
 def tarbell_newproject(command, args):
     """Create new Tarbell project."""
     with ensure_settings(command, args) as settings:
-        # Set it up and make the directory
         name = _get_project_name(args)
+        title = _get_project_title()
+        template = _get_template(settings)
+        spreadsheet_emails = _get_spreadsheet_emails()
+        
         puts("Creating {0}".format(colored.cyan(name)))
         path = _get_path(name, settings)
-        _mkdir(path)
-
+        
         try:
-            _newproject(command, path, name, settings)
+            make_dir(path)
+        except Exception, e:
+            show_error(str(e))
+            sys.exit()
+            
+        try:
+            git = create_project(path, name, title, template, \
+                spreadsheet_emails, settings)  
+
+            # Get site, run hook
+            with ensure_project(command, args, path) as site:
+                site.call_hook("newproject", site, git)
+                
+            # Messages
+            puts("\nAll done! To preview your new project, type:\n")
+            puts("{0} {1}".format(colored.green("tarbell switch"), colored.green(name)))
+            puts("\nor\n")
+            puts("{0}".format(colored.green("cd %s" % path)))
+            puts("{0}".format(colored.green("tarbell serve\n")))
+
+            puts("\nYou got this!\n")           
         except KeyboardInterrupt:
             delete_dir(path)
             show_error("ctrl-c pressed, not creating new project.")
@@ -379,7 +404,6 @@ def tarbell_update(command, args):
         puts(git.pull('origin', VERSION))
 
 
-
 def tarbell_unpublish(command, args):
     with ensure_settings(command, args) as settings, ensure_project(command, args) as site:
         """Delete a project."""
@@ -391,10 +415,6 @@ def tarbell_admin(command, args):
     
     print 'is_werkzeug_process', is_werkzeug_process()
     with ensure_settings(command, args) as settings:
-        # DEBUG
-        print 'CURRENT SETTINGS'
-        import pprint
-        pprint.pprint(settings.config)
         
         address = list_get(args, 0, "").split(":")
         ip = list_get(address, 0, '127.0.0.1')
@@ -404,67 +424,15 @@ def tarbell_admin(command, args):
         admin_site.app.run(ip, port=port)
     
 
-def _newproject(command, path, name, settings):
-    """Actual heavy lifting for project creation."""
-    key = None
-    title = _get_project_title()
-    template = _get_template(settings)
-
-    # Init repo
-    git = sh.git.bake(_cwd=path)
-    puts(git.init())
-
-    if template.get("url"):
-        # Create submodule
-        puts(git.submodule.add(template['url'], '_blueprint'))
-        puts(git.submodule.update(*['--init']))
-
-        # Get submodule branches, switch to current version
-        submodule = sh.git.bake(_cwd=os.path.join(path, '_blueprint'))
-        puts(submodule.fetch())
-        puts(submodule.checkout(VERSION))
-
-        # Create spreadsheet
-        key = _create_spreadsheet(name, title, path, settings)
-
-        # Copy html files
-        puts(colored.green("\nCopying html files..."))
-        files = glob.iglob(os.path.join(path, "_blueprint", "*.html"))
-        for file in files:
-            if os.path.isfile(file):
-                dir, filename = os.path.split(file)
-                if not filename.startswith("_") and not filename.startswith("."):
-                    puts("Copying {0} to {1}".format(filename, path))
-                    shutil.copy2(file, path)
-        ignore = os.path.join(path, "_blueprint", ".gitignore")
-        if os.path.isfile(ignore):
-            shutil.copy2(ignore, path)
-    else:
-        empty_index_path = os.path.join(path, "index.html")
-        open(empty_index_path, "w")
-
-    # Create config file
-    _copy_config_template(name, title, template, path, key, settings)
-
-    # Commit
-    puts(colored.green("\nInitial commit"))
-    puts(git.add('.'))
-    puts(git.commit(m='Created {0} from {1}'.format(name, template['name'])))
-
-    install_requirements(path)
-
-    # Get site, run hook
-    with ensure_project(command, args, path) as site:
-        site.call_hook("newproject", site, git)
-
-    # Messages
-    puts("\nAll done! To preview your new project, type:\n")
-    puts("{0} {1}".format(colored.green("tarbell switch"), colored.green(name)))
-    puts("\nor\n")
-    puts("{0}".format(colored.green("cd %s" % path)))
-    puts("{0}".format(colored.green("tarbell serve\n")))
-
-    puts("\nYou got this!\n")
+def _list_templates(settings):
+    """List templates from settings."""
+    for idx, option in enumerate(settings.config.get("project_templates"), start=1):
+        puts("  {0:5} {1:36}".format(
+            colored.yellow("[{0}]".format(idx)),
+            colored.cyan(option.get("name"))
+        ))
+        if option.get("url"):
+            puts("      {0}\n".format(option.get("url")))
 
 
 def _get_project_name(args):
@@ -485,6 +453,7 @@ def _get_project_title():
 
     return title
 
+
 def _get_path(name, settings, mkdir=True):
     """Generate a project path."""
     default_projects_path = settings.config.get("projects_path")
@@ -499,18 +468,6 @@ def _get_path(name, settings, mkdir=True):
             path = raw_input("\nWhere would you like to create this project? (e.g. ~/tarbell/) ")
 
     return os.path.expanduser(path)
-
-
-def _mkdir(path):
-    """Make a directory or bail."""
-    try:
-        os.mkdir(path)
-    except OSError, e:
-        if e.errno == 17:
-            show_error("ABORTING: Directory {0} already exists.".format(path))
-        else:
-            show_error("ABORTING: OSError {0}".format(e))
-        sys.exit()
 
 
 def _get_template(settings):
@@ -530,22 +487,11 @@ def _get_template(settings):
             pass
 
 
-def _list_templates(settings):
-    """List templates from settings."""
-    for idx, option in enumerate(settings.config.get("project_templates"), start=1):
-        puts("  {0:5} {1:36}".format(
-            colored.yellow("[{0}]".format(idx)),
-            colored.cyan(option.get("name"))
-        ))
-        if option.get("url"):
-            puts("      {0}\n".format(option.get("url")))
-
-
-def _create_spreadsheet(name, title, path, settings):
-    """Create Google spreadsheet"""
+def _get_spreadsheet_emails():
+    """Get Google spreadsheet emails"""
     if not settings.client_secrets:
         return None
-
+ 
     create = raw_input("Would you like to create a Google spreadsheet? [Y/n] ")
 
     if create and not create.lower() == "y":
@@ -557,112 +503,18 @@ def _create_spreadsheet(name, title, path, settings):
         "your.name@gmail.com. Separate multiple addresses with commas.)")
 
     if settings.config.get("google_account"):
-        emails = raw_input("\n{0}(Default: {1}) ".format(email_message,
-                                             settings.config.get("google_account")
-                                            ))
+        emails = raw_input("\n{0}(Default: {1}) ".\
+            format(email_message, settings.config.get("google_account")
+        ))
         if not emails:
             emails = settings.config.get("google_account")
     else:
         emails = None
         while not emails:
             emails = raw_input(email_message)
-
-    try:
-        media_body = _MediaFileUpload(os.path.join(path, '_blueprint/_spreadsheet.xlsx'),
-                                      mimetype='application/vnd.ms-excel')
-    except IOError:
-        show_error("_blueprint/_spreadsheet.xlsx doesn't exist!")
-        return None
-
-    service = get_drive_api()
-    body = {
-        'title': '{0} (Tarbell)'.format(title),
-        'description': '{0} ({1})'.format(title, name),
-        'mimeType': 'application/vnd.ms-excel',
-    }
-    try:
-        newfile = service.files()\
-            .insert(body=body, media_body=media_body, convert=True).execute()
-        for email in emails.split(","):
-            _add_user_to_file(newfile['id'], service, user_email=email.strip())
-        puts("\n{0}! View the spreadsheet at {1}".format(
-            colored.green("Success"),
-            colored.yellow("https://docs.google.com/spreadsheet/ccc?key={0}"
-                           .format(newfile['id']))
-            ))
-        return newfile['id']
-    except errors.HttpError, error:
-        show_error('An error occurred creating spreadsheet: {0}'.format(error))
-        return None
-
-
-def _add_user_to_file(file_id, service, user_email,
-                      perm_type='user', role='writer'):
-    """
-    Grants the given set of permissions for a given file_id. service is an
-    already-credentialed Google Drive service instance.
-    """
-    new_permission = {
-        'value': user_email,
-        'type': perm_type,
-        'role': role
-    }
-    try:
-        service.permissions()\
-            .insert(fileId=file_id, body=new_permission)\
-            .execute()
-    except errors.HttpError, error:
-        show_error('An error adding users to spreadsheet: {0}'.format(error))
-
-
-def _copy_config_template(name, title, template, path, key, settings):
-        """Get and render tarbell_config.py.template from blueprint"""
-        puts("\nCopying configuration file")
-        context = settings.config
-        context.update({
-            "default_context": {
-                "name": name,
-                "title": title,
-            },
-            "name": name,
-            "title": title,
-            "template_repo_url": template.get('url'),
-            "key": key,
-        })
-
-        # @TODO refactor this a bit
-        if not key:
-            spreadsheet_path = os.path.join(path, '_blueprint/', '_spreadsheet.xlsx')
-            try:
-                with open(spreadsheet_path, "rb") as f:
-                    puts("Copying _blueprint/_spreadsheet.xlsx to tarbell_config.py's DEFAULT_CONTEXT") 
-                    data = process_xlsx(f.read())
-                    if 'values' in data:
-                        data = copy_global_values(data)
-                    context["default_context"].update(data)
-            except IOError:
-                pass
-
-        s3_buckets = settings.config.get("s3_buckets")
-        if s3_buckets:
-            puts("")
-            for bucket, bucket_conf in s3_buckets.items():
-                puts("Configuring {0} bucket at {1}\n".format(
-                    colored.green(bucket),
-                    colored.yellow("{0}/{1}".format(bucket_conf['uri'], name))
-                ))
-
-        puts("\n- Creating {0} project configuration file".format(
-            colored.cyan("tarbell_config.py")
-        ))
-        template_dir = os.path.dirname(pkg_resources.resource_filename("tarbell", "templates/tarbell_config.py.template"))
-        loader = jinja2.FileSystemLoader(template_dir)
-        env = jinja2.Environment(loader=loader)
-        env.filters["pprint_lines"] = pprint_lines  # For dumping context
-        content = env.get_template('tarbell_config.py.template').render(context)
-        codecs.open(os.path.join(path, "tarbell_config.py"), "w", encoding="utf-8").write(content)
-        puts("\n- Done copying configuration file")
-
+            
+    return emails
+   
 
 class Command(object):
     COMMANDS = {}

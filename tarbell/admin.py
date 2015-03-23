@@ -21,9 +21,10 @@ from flask import Flask, request, render_template, jsonify
 from tarbell import __VERSION__ as VERSION
 from .oauth import get_drive_api
 from .contextmanagers import ensure_project
+from .utils import puts, clean_suffix
 from .admin_utils import make_dir, delete_dir, install_requirements, \
     install_project, install_blueprint, \
-    load_project_config, list_projects, clean_suffix
+    load_project_config, list_projects
 
 class TarbellAdminSite:
     def __init__(self, settings,  quiet=False):
@@ -73,12 +74,18 @@ class TarbellAdminSite:
         if len(values) > 1:
             return values
         return values[0]
-          
-    #
-    # Main view
-    # 
-     
+        
+    def _project_run(self, project_path, ip, port):
+        with ensure_project('serve', [], path=project_path) as site:
+            site.app.run(ip, port=port, use_reloader=False)
+ 
+    def _project_stop(self):
+        if self.p:
+            self.p.terminate()
+            self.p = None
+                        
     def main(self):
+        """Main view"""
         project_list = list_projects(self.settings.config.get('projects_path'))
 
         return render_template('admin.html', 
@@ -87,10 +94,6 @@ class TarbellAdminSite:
             credentials=self.credentials,
             project_list=project_list)
 
-    #
-    # Utility
-    #
-    
     def exists(self):
         """Check if a path exists"""
         try:
@@ -100,21 +103,13 @@ class TarbellAdminSite:
             traceback.print_exc()
             return jsonify({'error': str(e)})
 
-
-    #
-    # Configuration
-    #
-    
     def configuration_save(self):
+        """Save configuration"""
         try:
             raise Exception('Not implemented yet')
         except Exception, e:
             traceback.print_exc()
-            return jsonify({'error': str(e)})
-            
-    #
-    # Blueprints
-    #
+            return jsonify({'error': str(e)})           
     
     def blueprint_install(self):
         """
@@ -122,29 +117,13 @@ class TarbellAdminSite:
         test URL: https://github.com/jywsn/test-blueprint      
         """
         try:
-            url = self._request_get('url')
-             
+            url = self._request_get('url')             
             data = install_blueprint(url, self.settings)
-            
             return jsonify(data)
-
         except Exception, e:
             traceback.print_exc()
             return jsonify({'error': str(e)})
-  
-    #
-    # Projects
-    #
-
-    def _project_run(self, project_path, ip, port):
-        with ensure_project('serve', [], path=project_path) as site:
-            site.app.run(ip, port=port, use_reloader=False)
- 
-    def _project_stop(self):
-        if self.p:
-            self.p.terminate()
-            self.p = None
-    
+     
     def project_install(self):
         """
         Install project
@@ -166,8 +145,7 @@ class TarbellAdminSite:
             })
         except Exception, e:
             traceback.print_exc()
-            return jsonify({'error': str(e)})
-      
+            return jsonify({'error': str(e)})      
       
     def project_create(self):
         """Create project"""
@@ -175,8 +153,6 @@ class TarbellAdminSite:
             name, title, blueprint = self._request_get('name', 'title', 'blueprint')
             spreadsheet_emails = request.args.get('spreadsheet_emails')            
             
-            key = None
-            path = self._get_path(name)   
 
             print 'name', name
             print 'title', title
@@ -186,54 +162,12 @@ class TarbellAdminSite:
 
             raise Exception('NOT IMPLEMENTED')
 
+            path = self._get_path(name) 
             make_dir(path)
             
             try:
                 template = settings.config['project_templates'][int(blueprint) - 1]
-
-                # Init repo
-                git = sh.git.bake(_cwd=path)
-                print(git.init())
-            
-                if template.get('url'):
-                    # Create submodule
-                    print(git.submodule.add(template['url'], '_blueprint'))
-                    print(git.submodule.update(*['--init']))
-
-                    # Get submodule branches, switch to current version
-                    submodule = sh.git.bake(_cwd=os.path.join(path, '_blueprint'))
-                    print(submodule.fetch())
-                    print(submodule.checkout(VERSION))
- 
-                    # Create spreadsheet?
-                    if spreadsheet_emails:
-                        key = _create_spreadsheet(name, title, path, settings)
-                   
-                    # Copy html files
-                    print "Copying html files..."
-                    files = glob.iglob(os.path.join(path, "_blueprint", "*.html"))
-                    for file in files:
-                        if os.path.isfile(file):
-                            dir, filename = os.path.split(file)
-                            if not filename.startswith("_") and not filename.startswith("."):
-                                print("Copying {0} to {1}".format(filename, path))
-                                shutil.copy2(file, path)
-                    ignore = os.path.join(path, "_blueprint", ".gitignore")
-                    if os.path.isfile(ignore):
-                        shutil.copy2(ignore, path)
-                else:
-                    empty_index_path = os.path.join(path, "index.html")
-                    open(empty_index_path, "w")
-                                         
-                # Create config file
-                _copy_config_template(name, title, template, path, key, settings)
-                
-                # Commit
-                print(git.add('.'))
-                print(git.commit(m='Created {0} from {1}'.format(name, template['name'])))   
-                
-                # Install requirements
-                install_requirements(path, True) 
+                create_project(path, name, title, template, spreadsheet_emails, self.settings)                               
             except Exception, e:
                 delete_dir(path)
                 raise e
@@ -241,9 +175,9 @@ class TarbellAdminSite:
         except Exception, e:
             traceback.print_exc()
             return jsonify({'error': str(e)})
-            
-                 
+                             
     def project_run(self):
+        """Run preview server"""
         try:
             project, address = self._request_get('project', 'address')
 
@@ -278,6 +212,7 @@ class TarbellAdminSite:
             return jsonify({'error': str(e)})
             
     def project_stop(self):
+        """Stop preview server"""
         try:
             self._project_stop()
             return jsonify({})
@@ -286,6 +221,7 @@ class TarbellAdminSite:
             return jsonify({'error': str(e)})
     
     def project_update(self):
+        """Update blueprint in project"""
         try:
             project = self._request_get('project')
             project_path = self._get_path(project)
@@ -307,8 +243,7 @@ class TarbellAdminSite:
             return jsonify({'msg': resp})    
         except Exception, e:
             traceback.print_exc()
-            return jsonify({'error': str(e)})
-      
+            return jsonify({'error': str(e)})    
                   
     def project_generate(self):
         """
@@ -329,14 +264,14 @@ class TarbellAdminSite:
                     delete_dir(output_path)
                     
                 site.generate_static_site(output_path, None)
-                site.call_hook("generate", site, output_path, True)
-     
+      
             return jsonify({'path': output_path})           
         except Exception, e:
             traceback.print_exc()
             return jsonify({'error': str(e)})
 
     def project_publish(self):
+        """Publish project to S3"""
         try:
             project, bucket = self._request_get('project', 'bucket')
 

@@ -3,16 +3,17 @@
 """
 tarbell.admin_utils
 ~~~~~~~~~
-
 This module provides utilities for Tarbell cli and admin.
 """
-
-import os
-import sys
+import codecs
+import glob
 import imp
-import shutil
-import sh
+import jinja2
+import os
 import pkg_resources
+import sh
+import shutil
+import sys
 import tempfile
 
 from apiclient.http import MediaFileUpload as _MediaFileUpload
@@ -20,26 +21,19 @@ from clint.textui import colored
 
 from tarbell import __VERSION__ as VERSION
 
-from .app import process_xlsx, copy_global_values
-from .contextmanagers import ensure_settings, ensure_project
+from .app import pprint_lines, process_xlsx, copy_global_values
 from .oauth import get_drive_api
-from .utils import puts
+from .contextmanagers import ensure_settings, ensure_project
+from .utils import clean_suffix, puts, is_werkzeug_process
 
-def clean_suffix(string, suffix):
-    """If string endswith the suffix, remove it. Else leave it alone"""
-    suffix_len = len(suffix)
 
-    if len(string) < suffix_len:
-        # the string param was shorter than the suffix
-        raise ValueError("A suffix can not be bigger than string argument.")
-    if string.endswith(suffix):
-        # return from the beginning up to
-        # but not including the first letter
-        # in the suffix
-        return string[0:-suffix_len]   
-    else:
-        # leave unharmed
-        return string
+def _DeviceNotConfigured():
+    raise Exception('' \
+        'Git tried to prompt for a username or password.\n\n' \
+        'Tarbell doesn\'t support interactive sessions.  ' \
+        'Please configure ssh key access to your Git repository.  ' \
+        '(See https://help.github.com/articles/generating-ssh-keys/)')
+
 
 def make_dir(path):
     """Make a directory or raise Exception"""
@@ -62,10 +56,11 @@ def delete_dir(path):
         pass
 
 
-def install_requirements(path, force=False):
+def install_requirements(path):
     """Install requirements.txt"""
     locations = [os.path.join(path, "_blueprint"), os.path.join(path, "_base"), path] 
     success = True
+    force = is_werkzeug_process() # no interactivity if running admin GUI
     
     for location in locations:
         try:
@@ -86,10 +81,9 @@ def install_requirements(path, force=False):
             
     return success
     
- 
+
 def copy_config_template(name, title, template, path, key, settings):
-    """Get and render tarbell_config.py.template from blueprint"""
-        
+    """Get and render tarbell_config.py.template from blueprint"""       
     puts("\nCopying configuration file")
     context = settings.config
     context.update({
@@ -127,7 +121,8 @@ def copy_config_template(name, title, template, path, key, settings):
     puts("\n- Creating {0} project configuration file".format(
         colored.cyan("tarbell_config.py")
     ))
-    template_dir = os.path.dirname(pkg_resources.resource_filename("tarbell", "templates/tarbell_config.py.template"))
+    template_dir = os.path.dirname(pkg_resources.resource_filename(
+        "tarbell", "templates/tarbell_config.py.template"))
     loader = jinja2.FileSystemLoader(template_dir)
     env = jinja2.Environment(loader=loader)
     env.filters["pprint_lines"] = pprint_lines  # For dumping context
@@ -155,56 +150,6 @@ def list_projects(projects_dir):
             pass
     
     return projects_list
-    
-
-def _add_user_to_file(file_id, service, user_email, 
-    perm_type='user', role='writer'):
-    """
-    Grants the given set of permissions for a given file_id. service is an
-    already-credentialed Google Drive service instance.
-    """
-    new_permission = {
-        'value': user_email,
-        'type': perm_type,
-        'role': role
-    }
-    try:
-        service.permissions()\
-            .insert(fileId=file_id, body=new_permission)\
-            .execute()
-    except errors.HttpError, error:
-        raise Exception('Error adding users to spreadsheet: {0}'.format(error))
-
-    
-def create_spreadsheet(name, title, path, settings, emails):
-    """Create Google spreadsheet"""
-    if not emails:
-        emails = settings.config.get('google_account')
-    
-    try:
-        media_body = _MediaFileUpload(
-            os.path.join(path, '_blueprint/_spreadsheet.xlsx'),
-            mimetype='application/vnd.ms-excel')
-    except IOError:
-        print "_blueprint/_spreadsheet.xlsx doesn't exist!"
-        return None
-    
-    service = get_drive_api()
-    body = {
-        'title': '{0} (Tarbell)'.format(title),
-        'description': '{0} ({1})'.format(title, name),
-        'mimeType': 'application/vnd.ms-excel',
-    }
-    try:
-        newfile = service.files()\
-            .insert(body=body, media_body=media_body, convert=True).execute()
-        for email in emails.split(","):
-            _add_user_to_file(newfile['id'], service, user_email=email.strip())
-        
-        print "https://docs.google.com/spreadsheet/ccc?key={0}".format(newfile['id'])
-        return newfile['id']
-    except errors.HttpError, error:
-        raise Exception('Error occurred creating spreadsheet: {0}'.format(error))
     
 
 def install_blueprint(blueprint_url, settings):
@@ -247,23 +192,19 @@ def install_blueprint(blueprint_url, settings):
 
     except sh.ErrorReturnCode_128, e:
         if e.stdout.strip('\n').endswith('Device not configured'):
-            raise Exception('Git tried to prompt for a username or password.' \
-                + '  Tarbell doesn\'t support interactive sessions.' \
-                + '  Please configure ssh key access to your Git repository.' \
-                + '  (See https://help.github.com/articles/generating-ssh-keys/)')
+            _DeviceNotConfigured()
         else:
             raise Exception('Not a valid repository or Tarbell project')
     finally:
         delete_dir(tempdir)
  
      
-def install_project(project_url, project_path, command=None, args=None):
+def install_project(project_url, project_path):
     """
     Install project at project_url to project_path
     """
     error = None
     
-    # Create a tempdir and clone
     tempdir = tempfile.mkdtemp()
     
     try:
@@ -279,16 +220,10 @@ def install_project(project_url, project_path, command=None, args=None):
         
         install_requirements(project_path)
 
-        if command:
-            with ensure_project(command, args, project_path) as site:
-                site.call_hook("install", site, git)
-
+        return git
     except sh.ErrorReturnCode_128, e:
         if e.message.endswith('Device not configured\n'):
-            error = 'Git tried to prompt for a username or password.\n\n' \
-                'Tarbell doesn\'t support interactive sessions.  ' \
-                'Please configure ssh key access to your Git repository.  ' \
-                '(See https://help.github.com/articles/generating-ssh-keys/)'
+            _DeviceNotConfigured()
         else:
             error = 'Not a valid repository or Tarbell project'
         raise Exception(error)
@@ -296,4 +231,113 @@ def install_project(project_url, project_path, command=None, args=None):
         raise e
     finally:
         delete_dir(tempdir)
+        
+
+        
+                   
+def _add_user_to_file(file_id, service, user_email, perm_type='user', role='writer'):
+    """
+    Grants the given set of permissions for a given file_id. service is an
+    already-credentialed Google Drive service instance.
+    """
+    new_permission = {
+        'value': user_email,
+        'type': perm_type,
+        'role': role
+    }
+    try:
+        service.permissions()\
+            .insert(fileId=file_id, body=new_permission)\
+            .execute()
+    except errors.HttpError, e:
+        raise Exception('Error adding users to spreadsheet: {0}'.format(e))
+
+  
+def _create_spreadsheet(name, title, path, settings, emails):
+    """Create Google spreadsheet"""    
+    try:
+        media_body = _MediaFileUpload(
+            os.path.join(path, '_blueprint/_spreadsheet.xlsx'),
+            mimetype='application/vnd.ms-excel')
+    except IOError:
+        print "_blueprint/_spreadsheet.xlsx doesn't exist!"
+        return None
+    
+    service = get_drive_api()
+    body = {
+        'title': '{0} (Tarbell)'.format(title),
+        'description': '{0} ({1})'.format(title, name),
+        'mimeType': 'application/vnd.ms-excel',
+    }
+    try:
+        newfile = service.files()\
+            .insert(body=body, media_body=media_body, convert=True).execute()
+        for email in emails.split(","):
+            _add_user_to_file(newfile['id'], service, user_email=email.strip())
+
+        puts("\n{0}! View the spreadsheet at {1}".format(
+            colored.green("Success"),
+            colored.yellow("https://docs.google.com/spreadsheet/ccc?key={0}".format(newfile['id']))
+        ))        
+        return newfile['id']
+    except errors.HttpError, e:
+        raise Exception('An error occurred creating spreadsheet: {0}'.format(str(e)))
+
+
+def _copy_blueprint_files(project_path):
+    """
+    Copy blueprint html files
+    """
+    puts(colored.green("\nCopying html files..."))
+    files = glob.iglob(os.path.join(project_path, "_blueprint", "*.html"))
+    for file in files:
+        if os.path.isfile(file):
+            dir, filename = os.path.split(file)
+            if not filename.startswith("_") and not filename.startswith("."):
+                puts("Copying {0} to {1}".format(filename, project_path))
+                shutil.copy2(file, project_path)
+    ignore = os.path.join(path, "_blueprint", ".gitignore")
+    if os.path.isfile(ignore):
+        shutil.copy2(ignore, project_path)
+    
+
+def create_project(path, name, title, template, spreadsheet_emails, settings):
+    # Init repo
+    git = sh.git.bake(_cwd=path)
+    puts(git.init())
+
+    if template.get("url"):       
+        # Create blueprint submodule
+        puts(git.submodule.add(template['url'], '_blueprint'))
+        puts(git.submodule.update(*['--init']))
+
+        # Get submodule branches, switch to current version
+        submodule = sh.git.bake(_cwd=os.path.join(path, '_blueprint'))
+        puts(submodule.fetch())
+        puts(submodule.checkout(VERSION))
+        
+        # Create spreadsheet?
+        if spreadsheet_emails:
+            key = _create_spreadsheet(name, title, path, settings, spreadsheet_emails)
+
+        # Copy html files
+        _copy_blueprint_files(path)
+    else:
+        # Create empty index.html
+        empty_index_path = os.path.join(path, "index.html")
+        open(empty_index_path, "w")
+
+    # Create config file
+    copy_config_template(name, title, template, path, key, settings)
+
+    # Commit
+    puts(colored.green("\nInitial commit"))
+    puts(git.add('.'))
+    puts(git.commit(m='Created {0} from {1}'.format(name, template['name'])))
+
+    # Install requirements
+    install_requirements(path)
+    
+    return git
+    
 

@@ -54,3 +54,21 @@ def show_error(msg):
     """Displays error message."""
     sys.stdout.flush()
     sys.stderr.write("\n{0}: {1}".format(colored.red("Error"), msg + '\n'))
+    
+
+def clean_suffix(string, suffix):
+    """If string endswith the suffix, remove it. Else leave it alone"""
+    suffix_len = len(suffix)
+
+    if len(string) < suffix_len:
+        # the string param was shorter than the suffix
+        raise ValueError("A suffix can not be bigger than string argument.")
+    if string.endswith(suffix):
+        # return from the beginning up to
+        # but not including the first letter
+        # in the suffix
+        return string[0:-suffix_len]   
+    else:
+        # leave unharmed
+        return string
+
