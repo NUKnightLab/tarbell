@@ -24,6 +24,7 @@ $.fn.extend({
 
 var _s3_bucket_template = _.template($('#s3_bucket_template').html());
 var _select_bucket_template = _.template($('#select_bucket_template').html());
+var _select_blueprint_template = _.template($('#select_blueprint_template').html());
 var _error_alert_template = _.template($('#error_alert_template').html());
 var _success_alert_template = _.template($('#success_alert_template').html());
 var _blueprint_template = _.template($('#blueprint_template').html());
@@ -280,6 +281,9 @@ $(function() {
                 error_alert(error);
             },
             function(data) {
+                // Add to cached config!
+                _config['project_templates'].push(data);
+                
                 $('#blueprints_table tbody').append(_blueprint_template(data));
                 $('#blueprint_url').val('');
                 success_alert('Successfully installed blueprint <strong>'+data.name+'</strong>');                               
@@ -346,89 +350,62 @@ $(function() {
 // ------------------------------------------------------------
 // newproject modal
 // ------------------------------------------------------------
-
-    $('#newproject_back_button').click(function(event) {
-        var $cur_pane = $('#newproject_modal .modal-body > div').filter(':visible');
-        var $prev_pane = $cur_pane.prev();
+    
+    $('#newproject_name, #newproject_title').change(function(event) {
+        if($('#newproject_name').val().trim() 
+        && $('#newproject_title').val().trim()) {
+            $('#newproject_button').enable(); 
+        } else {
+            $('#newproject_button').disable();                
+        }    
+    });
+  
+    $('#newproject_button').click(function(event) {
+        var $modal = $('#newproject_modal')
+            .trigger('progress_show', 'Creating project');
         
-        if($prev_pane.length) {
-            $cur_pane.hide();
-            $prev_pane.show();
-            
-            $('#newproject_next_button').enable();
-            $('#newproject_create_button').disable();
-            
-            if($prev_pane.prev().length) {
-                $('#newproject_back_button').enable(); 
-            } else {
-                $('#newproject_back_button').disable(); 
-            }
-        }
-    });
-       
-    $('#newproject_next_button').click(function(event) {
-        var $cur_pane = $('#newproject_modal .modal-body > div').filter(':visible');        
-        var $next_pane = $cur_pane.next();
-         
-        if($next_pane.length) {
-            $cur_pane.hide();
-            $next_pane.show();
-            $('#newproject_back_button').enable();
-           
-            if($next_pane.next().length) {
-                $('#newproject_next_button').enable();
-                $('#newproject_create_button').disable();  
-            } else {
-                $('#newproject_next_button').disable();  
-                $('#newproject_create_button').enable();
-            }
-        }       
-    });
-    
-    $("#newproject_info_pane input[type='text']").change(function(event) {
-        if($('#newproject_info_name').val().trim()
-        && $('#newproject_info_title').val().trim()) {
-            $('#newproject_next_button').enable();          
-        } else {
-            $('#newproject_next_button').disable();        
-        }  
-    });
-    
-    $("input[name='newproject_spreadsheet']").click(function(event) {
-        if($(this).val()) {
-            $('#newproject_spreadsheet_details').show();
-        } else {
-            $('#newproject_spreadsheet_details').hide();
-        }
-    });
-
-    $("input[name='newproject_repo']").click(function(event) {
-        if($(this).val()) {
-            $('#newproject_repo_details').show();
-        } else {
-            $('#newproject_repo_details').hide();
-        }
+        var emails = $("#newproject_spreadsheet").is(':checked') ? 
+            $('#newproject_spreadsheet_emails').val().trim() : '';
+        
+        ajax_get('/project/create/', {  
+                name: $('#newproject_name').val().trim(),
+                title: $('#newproject_title').val().trim(),
+                blueprint: $('#newproject_blueprint').val(),
+                spreadsheet_emails: emails
+            },
+            function(error) {
+                $modal.trigger('error_show', error);
+            },
+            function(data) {
+                
+            },
+            function() {
+                $modal.trigger('progress_hide');
+            });            
     });
     
     modal_init($('#newproject_modal'))
         .on('show.bs.modal', function(event) {
-            $(this).trigger('error_hide').trigger('progress_hide');
+            $(this)
+                .trigger('error_hide')
+                .trigger('progress_hide');
             
-            $('#newproject_info_name, #newproject_info_title').val('');
+            $('#newproject_name, #newproject_title').val('');
+            
+            var html = '';
+            for(var i = 0; i < _config.project_templates.length; i++) {
+                html += _select_blueprint_template({
+                    value: i+1,
+                    name: _config.project_templates[i].name
+                });
+            }
+            $('#newproject_blueprint').html(html).val(1);
  
-            $("input[name='newproject_spreadsheet'][value='']").prop('checked', true);
-            $('#newproject_spreadsheet_details').hide();
-            $('#newproject_spreadsheet_emails').val(config.google_account);
-        
-            $("input[name='newproject_repo'][value='']").prop('checked', true);
-            $('#newproject_repo_details').hide();
-            $('#newproject_repo_username, #newproject_repo_password').val('');
-        
-            $('#newproject_modal .modal-body > div').hide();
-            $('#newproject_info_pane').show();   
-        
-            $('#newproject_back_button, #newproject_next_button, #newproject_create_button')
-                .disable(); 
+            $("#newproject_spreadsheet").prop('checked', false);
+            $('#newproject_emails').removeClass('in');  
+            $('#newproject_spreadsheet_emails').val(_config.google_account)
+                
+            $('#newproject_create_button').disable(); 
         });  
  
 // ------------------------------------------------------------
@@ -523,10 +500,10 @@ $(function() {
             $(this).trigger('error_hide').trigger('progress_hide');
 
             var html = '';
-            for(key in config.default_s3_buckets) {
+            for(key in _config.default_s3_buckets) {
                 html += _select_bucket_template({
                     name: key, 
-                    bucket: config.default_s3_buckets[key]
+                    bucket: _config.default_s3_buckets[key]
                 });
             }
             $('#publish_bucket').html(html).val('staging');

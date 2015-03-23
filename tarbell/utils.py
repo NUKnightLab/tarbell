@@ -7,6 +7,7 @@ tarbell.utils
 This module provides utilities for Tarbell.
 """
 
+from __future__ import print_function
 import os
 import sys
 from clint.textui import colored, puts as _puts
@@ -19,7 +20,9 @@ def is_werkzeug_process():
 
 def puts(*args, **kwargs):
     """Wrap puts to avoid getting called twice by Werkzeug reloader"""
-    if not is_werkzeug_process():
+    if is_werkzeug_process():
+        return print(*args, **kwargs)
+    else:
         return _puts(*args, **kwargs)
 
 

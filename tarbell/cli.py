@@ -32,6 +32,9 @@ if __name__ == "__main__" and __package__ is None:
     __package__ = "tarbell.cli"
 
 from .admin import TarbellAdminSite
+from .admin_utils import clean_suffix, delete_dir, install_requirements, \
+    install_project, install_blueprint
+
 from .app import pprint_lines, process_xlsx, copy_global_values
 from .oauth import get_drive_api
 from .contextmanagers import ensure_settings, ensure_project
@@ -138,7 +141,7 @@ def tarbell_generate(command, args, skip_args=False, extra_context=None, quiet=F
                 puts(("\nDeleting {0}...\n").format(
                     colored.cyan(output_root)
                 ))
-                _delete_dir(output_root)
+                delete_dir(output_root)
             else:
                 puts("\nNot overwriting. See ya!")
                 sys.exit()
@@ -156,96 +159,27 @@ def tarbell_install(command, args):
     with ensure_settings(command, args) as settings:
         project_url = args.get(0)
         puts("\n- Getting project information for {0}".format(project_url))
+        
         project_name = project_url.split("/").pop()
-        error = None
-
-        # Create a tempdir and clone
-        tempdir = tempfile.mkdtemp()
+        project_path = _get_path(clean_suffix(project_name, ".git"), settings)
+    
         try:
-            testgit = sh.git.bake(_cwd=tempdir, _tty_in=True, _tty_out=False) # _err_to_out=True)
-            testclone = testgit.clone(project_url, '.', '--depth=1', '--bare')
-            puts(testclone)
-            config = testgit.show("HEAD:tarbell_config.py")
-            puts("\n- Found tarbell_config.py")
-            path = _get_path(_clean_suffix(project_name, ".git"), settings)
-            _mkdir(path)
-            git = sh.git.bake(_cwd=path)
-            clone = git.clone(project_url, '.', _tty_in=True, _tty_out=False, _err_to_out=True)
-            puts(clone)
-            puts(git.submodule.update('--init', '--recursive', _tty_in=True, _tty_out=False, _err_to_out=True))
-            _install_requirements(path)
-
-            # Get site, run hook
-            with ensure_project(command, args, path) as site:
-                site.call_hook("install", site, git)
-
-        except sh.ErrorReturnCode_128, e:
-            if e.message.endswith('Device not configured\n'):
-                error = 'Git tried to prompt for a username or password.\n\nTarbell doesn\'t support interactive sessions. Please configure ssh key access to your Git repository. (See https://help.github.com/articles/generating-ssh-keys/)'
-            else:
-                error = 'Not a valid repository or Tarbell project'
-        finally:
-            _delete_dir(tempdir)
-            if error:
-                show_error(error)
-            else:
-                puts("\n- Done installing project in {0}".format(colored.yellow(path)))
-
+            install_project(project_url, project_path, command, args)
+            puts("\n- Done installing project in {0}".format(colored.yellow(project_path)))
+        except Exception, e:
+            show_error(str(e))
 
 def tarbell_install_blueprint(command, args):
     """Install a project template."""
     with ensure_settings(command, args) as settings:
-        name = None
-        error = None
         template_url = args.get(0)
-        matches = [template for template in settings.config["project_templates"] if template.get("url") == template_url]
-        tempdir = tempfile.mkdtemp()
-
-        if matches:
-            puts("\n{0} already exists. Nothing more to do.\n".format(
-                colored.yellow(template_url)
-            ))
-            sys.exit()
-
+    
         try:
-            puts("\nInstalling {0}".format(colored.cyan(template_url)))
-            puts("\n- Cloning repo")
-            git = sh.git.bake(_cwd=tempdir, _tty_in=True, _tty_out=False, _err_to_out=True)
-            puts(git.clone(template_url, '.'))
-            puts(git.fetch())
-            puts(git.checkout(VERSION))
-
-            _install_requirements(tempdir)
-
-            filename, pathname, description = imp.find_module('blueprint', [tempdir])
-            blueprint = imp.load_module('blueprint', filename, pathname, description)
-            puts("\n- Found _blueprint/blueprint.py")
-            name = blueprint.NAME
-            puts("\n- Name specified in blueprint.py: {0}".format(colored.yellow(name)))
-            settings.config["project_templates"].append({"name": name, "url": template_url})
-            print settings.config
-            settings.save()
-
-        except AttributeError:
-            name = template_url.split("/")[-1]
-            error = "\n- No name specified in blueprint.py, using '{0}'".format(colored.yellow(name))
-
-        except ImportError:
-            error = 'No blueprint.py found'
-
-        except sh.ErrorReturnCode_128, e:
-            if e.stdout.strip('\n').endswith('Device not configured'):
-                error = 'Git tried to prompt for a username or password.\n\nTarbell doesn\'t support interactive sessions. Please configure ssh key access to your Git repository. (See https://help.github.com/articles/generating-ssh-keys/)'
-            else:
-                error = 'Not a valid repository or Tarbell project'
-        finally:
-            _delete_dir(tempdir)
-            if error:
-                show_error(error)
-            else:
-                puts("\n+ Added new project template: {0}".format(colored.yellow(name)))
-
-
+            data = install_blueprint(template_url, settings)
+            puts("\n+ Added new project template: {0}".format(colored.yellow(data['name'])))
+        except Exception, e:
+            show_error(str(e))    
+            
 def tarbell_list(command, args):
     """List tarbell projects."""
     with ensure_settings(command, args) as settings:
@@ -361,7 +295,7 @@ def tarbell_publish(command, args):
         except KeyboardInterrupt:
             show_error("ctrl-c pressed, bailing out!")
         finally:
-            _delete_dir(tempdir)
+            delete_dir(tempdir)
 
 
 def tarbell_newproject(command, args):
@@ -376,10 +310,10 @@ def tarbell_newproject(command, args):
         try:
             _newproject(command, path, name, settings)
         except KeyboardInterrupt:
-            _delete_dir(path)
+            delete_dir(path)
             show_error("ctrl-c pressed, not creating new project.")
         except:
-            _delete_dir(path)
+            delete_dir(path)
             show_error("Unexpected error: {0}".format(sys.exc_info()[0]))
             raise
 
@@ -517,7 +451,7 @@ def _newproject(command, path, name, settings):
     puts(git.add('.'))
     puts(git.commit(m='Created {0} from {1}'.format(name, template['name'])))
 
-    _install_requirements(path)
+    install_requirements(path)
 
     # Get site, run hook
     with ensure_project(command, args, path) as site:
@@ -531,29 +465,6 @@ def _newproject(command, path, name, settings):
     puts("{0}".format(colored.green("tarbell serve\n")))
 
     puts("\nYou got this!\n")
-
-
-def _install_requirements(path):
-    """Install requirements.txt"""
-    locations = [os.path.join(path, "_blueprint"), os.path.join(path, "_base"), path] 
-    success = True
-
-    for location in locations:
-        try:
-            with open(os.path.join(location, "requirements.txt")):
-                puts("\nRequirements file found at {0}".format(os.path.join(location, "requirements.txt")))
-                install_reqs = raw_input("Install requirements now with pip install -r requirements.txt? [Y/n] ")
-                if not install_reqs or install_reqs.lower() == 'y':
-                    pip = sh.pip.bake(_cwd=location)
-                    puts("\nInstalling requirements...")
-                    puts(pip("install", "-r", "requirements.txt"))
-                else:
-                    success = False
-                    puts("Not installing requirements. This may break everything! Vaya con dios.")
-        except IOError:
-            pass
-
-    return success
 
 
 def _get_project_name(args):
@@ -573,24 +484,6 @@ def _get_project_title():
         title = raw_input("What is the project's full title? (e.g. My awesome project) ")
 
     return title
-
-
-def _clean_suffix(string, suffix):
-    """If string endswith the suffix, remove it. Else leave it alone"""
-    suffix_len = len(suffix)
-
-    if len(string) < suffix_len:
-        # the string param was shorter than the suffix
-        raise ValueError("A suffix can not be bigger than string argument.")
-    if string.endswith(suffix):
-        # return from the beginning up to
-        # but not including the first letter
-        # in the suffix
-        return string[0:-suffix_len]   
-    else:
-        # leave unharmed
-        return string
-
 
 def _get_path(name, settings, mkdir=True):
     """Generate a project path."""
@@ -769,17 +662,6 @@ def _copy_config_template(name, title, template, path, key, settings):
         content = env.get_template('tarbell_config.py.template').render(context)
         codecs.open(os.path.join(path, "tarbell_config.py"), "w", encoding="utf-8").write(content)
         puts("\n- Done copying configuration file")
-
-
-def _delete_dir(dir):
-    """Delete tempdir"""
-    try:
-        shutil.rmtree(dir)  # delete directory
-    except OSError as exc:
-        if exc.errno != 2:  # code 2 - no such file or directory
-            raise  # re-raise exception
-    except UnboundLocalError:
-        pass
 
 
 class Command(object):

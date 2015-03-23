@@ -340,87 +340,40 @@
                 <h4 class="modal-title">New Project</h4>
             </div>
             <div class="modal-body">
-                <div id="newproject_info_pane"">
-                    <form>
-                        <div class="form-group">
-                            <label for="newproject_info_name">Short Directory Name</label>
-                            <input type="text" class="form-control" id="newproject_info_name" placeholder="my_project">
-                        </div>
-                        <div class="form-group">
-                            <label for="newproject_info_title">Full Title</label>
-                            <input type="text" class="form-control" id="newproject_info_title" placeholder="My Awesome Project">
-                        </div>
-                        <div class="form-group">
-                            <label for="newproject_info_blueprint">Blueprint</label>
-                            <select class="form-control">
-{% for item in config.project_templates %}
-                                <option value="{{ loop.index }}">{{ item.name }}</option>
-{% endfor %}            
-                            </select>
-                        </div>
-                    </form>
-                </div>
-                <div id="newproject_spreadsheet_pane">               
-                    <form>
-                        <p>
-                            <div>Would you like to create a Google spreadsheet?</div>
-                            <label class="radio-inline">
-                                <input type="radio" name="newproject_spreadsheet" value=""> No
-                            </label>                         
-                            <label class="radio-inline">
-                                <input type="radio" name="newproject_spreadsheet" value="1"> Yes
-                            </label>
-                        </p>
-                        <div id="newproject_spreadsheet_details">
-                            <p>
-                            What Google account(s) should have access to this this spreadsheet?
-                            </p>
-                            <textarea id="newproject_spreadsheet_emails" class="form-control" rows="3" aria-describedby="newproject_spreadsheet_emails_help"></textarea>
-                            <span id="newproject_spreadsheet_emails_help" class="help-block">
-                            Use a full email address, such as your.name@gmail.com. Separate multiple addresses with commas.
-                            </span>
-                            </p>
-                        </div>
-                    </form>
-                </div>                
-                <div id="newproject_repo_pane">               
-                    <form class="form-horizontal">
-                        <p>
-                            <div>Would you like to create a Github repo for this project?</div>
-                            <label class="radio-inline">
-                                <input type="radio" name="newproject_repo" value=""> No
-                            </label>                         
-                            <label class="radio-inline">
-                                <input type="radio" name="newproject_repo" value="1"> Yes
-                            </label>
-                        </p>
-                        <div id="newproject_repo_details">
-                            <p>
-                                <div class="form-group">
-                                    <label for="newproject_repo_username" class="col-xs-3 control-label">Github username</label>
-                                    <div class="col-xs-9">
-                                        <input type="text" class="form-control" id="newproject_repo_username">
-                                    </div>
-                                </div>
-                                <div class="form-group">
-                                    <label for="newproject_repo_password" class="col-xs-3 control-label">Github password</label>
-                                    <div class="col-xs-9">
-                                        <input type="text" class="form-control" id="newproject_repo_password">
-                                    </div>
-                                </div>
-                            </p>
-                        </div>
-                    </form>
-                </div>
-                <div id="newproject_create_pane">
-                    <p>show some sort of summary here</p>
-                </div>
+                <p class="modal-error bg-danger">
+                    <span class="modal-msg text-danger">danger will robinson</span>
+                </p>
+                 <form>
+                    <div class="form-group">
+                        <label for="newproject_name">Short Directory Name</label>
+                        <input type="text" class="form-control" id="newproject_name" placeholder="my_project">
+                    </div>
+                    <div class="form-group">
+                        <label for="newproject_title">Full Title</label>
+                        <input type="text" class="form-control" id="newproject_title" placeholder="My Awesome Project">
+                    </div>
+                    <div class="form-group">
+                        <label for="newproject_blueprint">Blueprint</label>
+                        <select class="form-control" id="newproject_blueprint">
+                            <!-- fill options on show.bs.modal -->
+                        </select>
+                    </div>                      
+                    <div class="checkbox">
+                        <label data-toggle="collapse" data-target="#newproject_emails">
+                            <input type="checkbox" id="newproject_spreadsheet"> Create a Google spreadsheet
+                        </label>
+                    </div>
+                    <div id="newproject_emails" class="collapse">
+                        <textarea id="newproject_spreadsheet_emails" class="form-control" rows="3" aria-describedby="newproject_spreadsheet_emails_help"></textarea>
+                        <span id="newproject_spreadsheet_emails_help" class="help-block">
+                        Use a full email address, such as your.name@gmail.com. Separate multiple addresses with commas.
+                        </span>
+                    </div>
+                </form> 
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-default" id="newproject_back_button">Back</button>
-                <button type="button" class="btn btn-default" id="newproject_next_button">Next</button>
-                <button type="button" class="btn btn-primary" id="newproject_create_button" disabled="disabled">Create</button>
+                <button type="button" class="btn btn-primary" id="newproject_button" disabled="disabled">Create</button>
             </div>
             <div class="modal-progress" style="display: none;">
                 <div>
@@ -452,6 +405,10 @@
 
 <script type="text/template" id="select_bucket_template">
 <option value="<%= name %>"><%= bucket %></option>
+</script>
+
+<script type="text/template" id="select_blueprint_template">
+<option value="<%= value %>"><%= name %></option>
 </script>
 
 <script type="text/template" id="error_alert_template">
@@ -504,7 +461,7 @@
 
 <script type="text/javascript">
 
-var config = {{ config|tojson }};
+var _config = {{ config|tojson }};
 
 </script>
 

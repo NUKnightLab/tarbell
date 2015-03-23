@@ -11,8 +11,10 @@ import time
 import requests
 import re
 import sh
+import shutil
 import tempfile
 import StringIO
+from .utils import puts
 
 from flask import Flask, request, render_template, jsonify
 
@@ -20,6 +22,7 @@ from tarbell import __VERSION__ as VERSION
 from .oauth import get_drive_api
 from .contextmanagers import ensure_project
 from .admin_utils import make_dir, delete_dir, install_requirements, \
+    install_project, install_blueprint, \
     load_project_config, list_projects, clean_suffix
 
 class TarbellAdminSite:
@@ -44,6 +47,7 @@ class TarbellAdminSite:
         self.app.add_url_rule('/blueprint/install/', view_func=self.blueprint_install)
              
         self.app.add_url_rule('/project/install/', view_func=self.project_install)
+        self.app.add_url_rule('/project/create/', view_func=self.project_create)
         self.app.add_url_rule('/project/run/', view_func=self.project_run)
         self.app.add_url_rule('/project/stop/', view_func=self.project_stop)
         self.app.add_url_rule('/project/update/', view_func=self.project_update)
@@ -120,52 +124,9 @@ class TarbellAdminSite:
         try:
             url = self._request_get('url')
              
-            matches = [b for b in self.settings.config["project_templates"] if b.get("url") == url]
-            if matches:
-                raise Exception('Blueprint already exists.  Nothing to do.')
-                
-            try:
-                print 'Installing %s' % url
-                tempdir = tempfile.mkdtemp()
-
-                print 'Cloning repo'
-                git = sh.git.bake(_cwd=tempdir, _tty_in=True, _tty_out=False, _err_to_out=True)
-                git.clone(url, '.')
-                git.fetch()
-                git.checkout(VERSION)
-
-                print 'Installing requirements'
-                install_requirements(tempdir)
-
-                print 'Loading blueprint module'
-                filename, pathname, description = imp.find_module('blueprint', [tempdir])
-                blueprint = imp.load_module('blueprint', filename, pathname, description)            
-                print 'Found _blueprint/blueprint.py'
-                
-                try:
-                    name = blueprint.NAME
-                    print 'Name specified in blueprint.py: %s' % name
-                except AttributeError:
-                    name = url.split("/")[-1]   
-                    print 'No name specified in blueprint.py, using "%s"' % name
-               
-                data = {"name": name, "url": url} 
-                self.settings.config["project_templates"].append(data)
-                self.settings.save()
-
-                return jsonify(data)
-            except ImportError:
-                raise Exception('No blueprint.py found')
-            except sh.ErrorReturnCode_128, e:
-                if e.stdout.strip('\n').endswith('Device not configured'):
-                    raise Exception('Git tried to prompt for a username or password.' \
-                        + '  Tarbell doesn\'t support interactive sessions.' \
-                        + '  Please configure ssh key access to your Git repository.' \
-                        + '  (See https://help.github.com/articles/generating-ssh-keys/)')
-                else:
-                    raise Exception('Not a valid repository or Tarbell project')
-            finally:
-                delete_dir(tempdir)
+            data = install_blueprint(url, self.settings)
+            
+            return jsonify(data)
 
         except Exception, e:
             traceback.print_exc()
@@ -192,59 +153,96 @@ class TarbellAdminSite:
         try:
             url = self._request_get('url')
             
-            name = url.split("/").pop()
-            if not name:
-                raise Exception('Could not determine project name from url')
-            name = clean_suffix(name, ".git")
-                        
-            tempdir = tempfile.mkdtemp()
+            name = clean_suffix(url.split("/").pop(), ".git")      
+            path = self._get_path(name)
             
-            print name, url, tempdir
-            
-            try:
-                testgit = sh.git.bake(_cwd=tempdir, _tty_in=True, _tty_out=False) # _err_to_out=True)
-                testclone = testgit.clone(url, '.', '--depth=1', '--bare')
-                print testclone
-                
-                print testgit.show("HEAD:tarbell_config.py")
-                                             
-                path = self._get_path(name)
-                print path
-                
-                make_dir(path)
-                
-                git = sh.git.bake(_cwd=path)
-                print git.clone(url, '.', _tty_in=True, _tty_out=False, _err_to_out=True)
-                print git.submodule.update('--init', '--recursive', _tty_in=True, _tty_out=False, _err_to_out=True)
-
-                install_requirements(path)
-
-                # Get site, run hook
-                with ensure_project(None, None, path) as site:
-                    site.call_hook("install", site, git)
-                  
-                # Load new project config
-                config = load_project_config(path)
+            install_project(url, path)
+                   
+            config = load_project_config(path)
                                  
-                return jsonify({
-                    'directory': name, 
-                    'title': config.DEFAULT_CONTEXT.get("title", name)
-                })
-            except sh.ErrorReturnCode_128, e:
-                if e.message.endswith('Device not configured\n'):
-                    raise Exception('Git tried to prompt for a username or password.' \
-                        + '  Tarbell doesn\'t support interactive sessions.' \
-                        + '  Please configure ssh key access to your Git repository.' \
-                        + '  (See https://help.github.com/articles/generating-ssh-keys/)')
-                else:
-                    raise Exception('Not a valid repository or Tarbell project')
-            finally:
-                delete_dir(tempdir)
- 
+            return jsonify({
+                'directory': name, 
+                'title': config.DEFAULT_CONTEXT.get("title", name)
+            })
         except Exception, e:
             traceback.print_exc()
             return jsonify({'error': str(e)})
-           
+      
+      
+    def project_create(self):
+        """Create project"""
+        try:            
+            name, title, blueprint = self._request_get('name', 'title', 'blueprint')
+            spreadsheet_emails = request.args.get('spreadsheet_emails')            
+            
+            key = None
+            path = self._get_path(name)   
+
+            print 'name', name
+            print 'title', title
+            print 'blueprint', blueprint
+            print 'google', spreadsheet_emails
+            print 'mkdir', path        
+
+            raise Exception('NOT IMPLEMENTED')
+
+            make_dir(path)
+            
+            try:
+                template = settings.config['project_templates'][int(blueprint) - 1]
+
+                # Init repo
+                git = sh.git.bake(_cwd=path)
+                print(git.init())
+            
+                if template.get('url'):
+                    # Create submodule
+                    print(git.submodule.add(template['url'], '_blueprint'))
+                    print(git.submodule.update(*['--init']))
+
+                    # Get submodule branches, switch to current version
+                    submodule = sh.git.bake(_cwd=os.path.join(path, '_blueprint'))
+                    print(submodule.fetch())
+                    print(submodule.checkout(VERSION))
+ 
+                    # Create spreadsheet?
+                    if spreadsheet_emails:
+                        key = _create_spreadsheet(name, title, path, settings)
+                   
+                    # Copy html files
+                    print "Copying html files..."
+                    files = glob.iglob(os.path.join(path, "_blueprint", "*.html"))
+                    for file in files:
+                        if os.path.isfile(file):
+                            dir, filename = os.path.split(file)
+                            if not filename.startswith("_") and not filename.startswith("."):
+                                print("Copying {0} to {1}".format(filename, path))
+                                shutil.copy2(file, path)
+                    ignore = os.path.join(path, "_blueprint", ".gitignore")
+                    if os.path.isfile(ignore):
+                        shutil.copy2(ignore, path)
+                else:
+                    empty_index_path = os.path.join(path, "index.html")
+                    open(empty_index_path, "w")
+                                         
+                # Create config file
+                _copy_config_template(name, title, template, path, key, settings)
+                
+                # Commit
+                print(git.add('.'))
+                print(git.commit(m='Created {0} from {1}'.format(name, template['name'])))   
+                
+                # Install requirements
+                install_requirements(path, True) 
+            except Exception, e:
+                delete_dir(path)
+                raise e
+
+        except Exception, e:
+            traceback.print_exc()
+            return jsonify({'error': str(e)})
+            
+                 
     def project_run(self):
         try:
             project, address = self._request_get('project', 'address')
@@ -296,13 +294,15 @@ class TarbellAdminSite:
                 git = sh.git.bake(_cwd=site.base.base_dir)
                 git.fetch()
   
-                print(git.checkout(VERSION))
-                print(git.stash())                
+                puts(git.checkout(VERSION))
+                puts(git.stash())                
                 
                 output = StringIO.StringIO()
                 output.write(git.pull('origin', VERSION))
                 resp = output.getvalue()
                 output.close()
+                
+                puts(resp)
                 
             return jsonify({'msg': resp})    
         except Exception, e:
