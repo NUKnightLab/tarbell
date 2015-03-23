@@ -305,7 +305,7 @@ $(function() {
         $(this).closest('.input-group').removeClass('has-error');
         progress_show('Installing project'); 
              
-        ajax_get('/project/install', {url: url},
+        ajax_get('/project/install/', {url: url},
             function(error) {
                 error_alert(error);
             },
@@ -324,7 +324,23 @@ $(function() {
     });
     
     $('.project-update').click(function(event) {
-        error_alert('not implemented');
+        alert_hide();
+        
+        var project = $(this).closest('tr').attr('data-project');
+        console.log('project', $(this).closest('tr'));
+
+        progress_show('Updating project blueprint'); 
+
+        ajax_get('/project/update/', {project: project},
+            function(error) {
+                error_alert(error);
+            },
+            function(data) {
+                success_alert('Updated <strong>'+project+'</strong> blueprint ('+data.msg+')');                               
+            },
+            function() {
+                progress_hide();
+            });
     });
     
 // ------------------------------------------------------------

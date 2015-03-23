@@ -12,6 +12,7 @@ import requests
 import re
 import sh
 import tempfile
+import StringIO
 
 from flask import Flask, request, render_template, jsonify
 
@@ -289,8 +290,21 @@ class TarbellAdminSite:
     def project_update(self):
         try:
             project = self._request_get('project')
+            project_path = self._get_path(project)
 
-            raise Exception('Not implemented yet')
+            with ensure_project(None, None, path=project_path) as site:                                
+                git = sh.git.bake(_cwd=site.base.base_dir)
+                git.fetch()
+  
+                print(git.checkout(VERSION))
+                print(git.stash())                
+                
+                output = StringIO.StringIO()
+                output.write(git.pull('origin', VERSION))
+                resp = output.getvalue()
+                output.close()
+                
+            return jsonify({'msg': resp})    
         except Exception, e:
             traceback.print_exc()
             return jsonify({'error': str(e)})
@@ -303,7 +317,6 @@ class TarbellAdminSite:
         """
         try:
             project = self._request_get('project')
-   
             project_path = self._get_path(project)
                 
             output_path = request.args.get('path')

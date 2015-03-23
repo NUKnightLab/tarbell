@@ -42,7 +42,7 @@ def make_dir(path):
             raise Exception("OSError {0}.".format(e))
          
 def delete_dir(path):
-    """Delete dir"""
+    """Delete directory"""
     try:
         shutil.rmtree(path)
     except OSError as exc:
@@ -89,8 +89,7 @@ def list_projects(projects_dir):
     for directory in os.listdir(projects_dir):
         project_path = os.path.join(projects_dir, directory)
         try:
-            filename, pathname, description = imp.find_module('tarbell_config', [project_path])
-            config = imp.load_module(directory, filename, pathname, description)
+            config = load_project_config(project_path)
             title = config.DEFAULT_CONTEXT.get("title", directory)
             projects_list.append({'directory': directory, 'title': title})
         except ImportError:
