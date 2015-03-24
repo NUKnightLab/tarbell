@@ -74,12 +74,12 @@
                     <input type="text" class="form-control" value="{{ key }}" placeholder="name">
                 </div>
                 <div class="col-xs-5">
-                    <input type="text" class="form-control" value="{{ value }}" placeholder="bucket name">
+                    <input type="text" class="form-control" value="{{ value }}" placeholder="the.bucket.url">
                 </div>
                 <div class="col-xs-1">
-                <a class="btn text-danger config-remove-bucket" href="#" onclick="config_disable_bucket(this)">
+                <a class="btn text-danger remove-bucket" href="#" onclick="disable_bucket(this)">
                     <i class="fa fa-lg fa-remove"></i></a>
-                <a class="btn text-success config-add-bucket" href="#" style="display: none;" onclick="config_enable_bucket(this)">
+                <a class="btn text-success add-bucket" href="#" style="display: none;" onclick="enable_bucket(this)">
                     <i class="fa fa-lg fa-plus"></i></a>
                 </div>
             </div>    
@@ -156,7 +156,8 @@
                         {{ project.title }}</a>
                     </td>
                     <td class="actions nowrap">
-                        <button class="btn btn-default project-details" title="Edit project details">
+                        <button class="btn btn-default project-detail" title="View project details"
+                            data-toggle="modal" data-target="#detail_modal">
                             <i class="fa fa-lg fa-cog"></i>
                         </button>
                         <button class="btn btn-default project-update" title="Update the blueprint in this project">
@@ -190,7 +191,7 @@
 </div> <!-- // row -->
 </div> <!-- // container-fluid -->
 
-<!-- modal: progress, should have data-backdrop="static" -->
+<!-- MODAL: progress, should have data-backdrop="static" -->
 <div id="progress_modal" class="modal fade" data-keyboard="false">
     <div class="modal-dialog">
         <div class="modal-body">
@@ -206,7 +207,7 @@
     </div>
 </div>
 
-<!-- modal: run -->
+<!-- MODAL: run -->
 <div id="run_modal" class="modal fade" data-backdrop="static" data-keyboard="false">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -243,7 +244,7 @@
     </div>
 </div>
 
-<!-- modal: generate -->
+<!-- MODAL: generate -->
 <div id="generate_modal" class="modal fade" data-backdrop="static" data-keyboard="false">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -254,10 +255,10 @@
                 <p class="modal-error bg-danger">
                     <span class="modal-msg text-danger"></span>
                 </p>
-                 <p class="modal-success bg-success">
+                <p class="modal-success bg-success">
                     <span class="modal-msg text-success"></span>
                 </p>           
-               <form class='form-horizontal'>
+                <form class='form-horizontal'>
                     <div class="form-group">
                         <label for="generate_path" class="col-xs-3 control-label">Output Path</label>
                         <div class="col-xs-9">
@@ -294,7 +295,7 @@
     </div>
 </div>
 
-<!-- modal: publish -->
+<!-- MODAL: publish -->
 <div id="publish_modal" class="modal fade" data-backdrop="static" data-keyboard="false">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -332,7 +333,7 @@
     </div>
 </div>
 
-<!-- modal: new project -->
+<!-- MODAL: new project -->
 <div id="newproject_modal" class="modal fade" data-backdrop="static" data-keyboard="false">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -343,7 +344,7 @@
                 <p class="modal-error bg-danger">
                     <span class="modal-msg text-danger">danger will robinson</span>
                 </p>
-                 <form>
+                <form>
                     <div class="form-group">
                         <label for="newproject_name">Short Directory Name</label>
                         <input type="text" class="form-control" id="newproject_name" placeholder="my_project">
@@ -383,21 +384,111 @@
                     </div>
                 </div>
             </div>
+        </div>
     </div>
 </div>
 
+<!-- MODAL: project details -->
+<div id="detail_modal" class="modal fade" data-backdrop="static" data-keyboard="false">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-body">
+                <p class="modal-error bg-danger">
+                    <span class="modal-msg text-danger">danger will robinson</span>
+                </p>
+                <ul class="nav nav-tabs">
+                    <li class="active"><a href="#detail_context_tab" data-toggle="tab">Context</a></li>
+                    <li><a href="#detail_spreadsheet_tab" data-toggle="tab">Spreadsheet</a></li>
+                    <li><a href="#detail_publish_tab" data-toggle="tab">Publishing</a></li>
+                </ul>
+                <div class="tab-content">
+                    <div class="tab-pane active" id="detail_context_tab">
+                        <form>
+                            <div class="form-group">
+                                <label for="detail_title">Full Title</label>
+                                <input type="text" class="form-control" id="detail_title" placeholder="My Awesome Project">
+                            </div>
+                             <div class="form-group">
+                                <label for="detail_context_source_file">Context Source File</label>
+                                <input type="text" class="form-control" id="detail_context_source_file" placeholder="" aria-describedby="detail_context_source_file_help">
+                                <span id="detail_context_source_file_help" class="help-block">
+                                Use this data file for the template context. CSV, XLS, and XSLX files are supported. 
+                                The value may use a relative path, an absolute path, or a remote (http) URL.
+                                </span>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="tab-pane" id="detail_spreadsheet_tab">
+                        <form class="form-horizontal">
+                            <div class="form-group">
+                                <label for="detail_spreadsheet_key" class="col-sm-4 control-label">Google Spreadsheet Key</label>
+                                <div class="col-sm-8">
+                                    <input type="text" class="form-control" id="detail_spreadsheet_key" placeholder="">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="detail_spreadsheet_cache_ttl" class="col-sm-4 control-label">Speadsheet Cache</label>
+                                <div class="col-sm-8">
+                                    <input type="number" class="form-control" id="detail_spreadsheet_cache_ttl" placeholder="4"
+                                    aria-describedby="detail_spreadsheet_cache_ttl_help">
+                                    <span id="detail_spreadsheet_cache_ttl" class="help-block">
+                                    How long to cache spreadsheet values, in seconds
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                               <label for="detail_create_json" class="col-sm-4 control-label">Create JSON</label>
+                                <div class="col-sm-8 checkbox">
+                                    <label>
+                                        <input type="checkbox" id="detail_create_json"> Preview and publish spreadsheet as <code>data.json</code>
+                                    </label>
+                                </div>    
+                            </div>
+                        </form>
+                    </div>
+                    <div class="tab-pane" id="detail_publish_tab">
+                        <form>
+                            <div class="form-group">
+                                <label for="detail_excludes">Excludes</label>
+                                <textarea id="detail_excludes" class="form-control" rows="2" aria-describedby="detail_excludes_help"></textarea>
+                                <span id="detail_excludes_help" class="help-block">
+                                A list of files to exclude from publication such as "*.txt" or "img/mockup.psd".  Separate with items commas.
+                                </span>
+                            </div>
+                        </form>
+                        
+                        <div class="row">
+                            <div class="col-sm-11"><label>S3 Buckets</label></div>
+                            <div class="col-sm-1"><a class="btn text-success" id="detail_add_bucket" href="#"><i class="fa fa-lg fa-plus"></i></a></div>
+                        </div>
+                        
+                        <form class="form-horizontal" id="detail_bucket_form">
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="detail_button">Save</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
 <!-- UNDERSCORE TEMPLATES -->
 
-<script type="text/template" id="s3_bucket_template">
+<script type="text/template" id="config_s3_bucket_template">
 <div class="form-group">
     <div class="col-xs-offset-3 col-xs-3">
-        <input type="text" class="form-control" value="" placeholder="name">
+        <input type="text" class="form-control" value="" placeholder="bucket_name">
     </div>
     <div class="col-xs-5">
-        <input type="text" class="form-control" value="" placeholder="bucket name">
+        <input type="text" class="form-control" value="" placeholder="the.bucket.url">
     </div>
     <div class="col-xs-1">
-        <a class="btn text-danger config-remove-bucket" href="#" onclick="config_remove_bucket(this)">
+        <a class="btn text-danger remove-bucket" href="#" onclick="remove_bucket(this)">
             <i class="fa fa-lg fa-remove"></i></a>
     </div>
 </div>
@@ -439,7 +530,8 @@
         <%= title %></a>
     </td>
     <td class="actions nowrap">
-        <button class="btn btn-default project-details" title="Edit project details">
+        <button class="btn btn-default project-detail" title="View project details"
+            data-toggle="modal" data-target="#detail_modal">
             <i class="fa fa-lg fa-cog"></i>
         </button>
         <button class="btn btn-default project-update" title="Update the blueprint in this project">
@@ -455,6 +547,21 @@
         </button>
     </td>
 </tr>
+</script>
+
+<script type="text/template" id="detail_s3_bucket_template">
+<div class="form-group">
+    <div class="col-sm-4">
+        <input type="text" class="form-control bucket-name" value="<%= typeof(name) !== 'undefined' ? name : '' %>" placeholder="bucket_name">
+    </div>
+    <div class="col-sm-7">
+        <input type="text" class="form-control bucket-url" value="<%= typeof(url) !== 'undefined' ? url : '' %>" placeholder="the.bucket.url">
+    </div>
+    <div class="col-sm-1">
+    <a class="btn text-danger remove-bucket" href="#" onclick="remove_bucket(this)">
+        <i class="fa fa-lg fa-remove"></i></a>
+    </div>
+</div>
 </script>
 
 <!-- JAVASCRIPT -->

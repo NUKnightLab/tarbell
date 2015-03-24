@@ -24,7 +24,7 @@ from .contextmanagers import ensure_project
 from .utils import puts, clean_suffix
 from .admin_utils import make_dir, delete_dir, install_requirements, \
     install_project, install_blueprint, \
-    load_project_config, list_projects, create_project
+    load_project_config_dict, list_projects, create_project
 
 class TarbellAdminSite:
     def __init__(self, settings,  quiet=False):
@@ -52,6 +52,8 @@ class TarbellAdminSite:
         self.app.add_url_rule('/project/run/', view_func=self.project_run)
         self.app.add_url_rule('/project/stop/', view_func=self.project_stop)
         self.app.add_url_rule('/project/update/', view_func=self.project_update)
+        self.app.add_url_rule('/project/config/', view_func=self.project_config)
+        self.app.add_url_rule('/project/config/save/', view_func=self.project_config_save)
         self.app.add_url_rule('/project/generate/', view_func=self.project_generate)
         self.app.add_url_rule('/project/publish/', view_func=self.project_publish)
         
@@ -137,11 +139,11 @@ class TarbellAdminSite:
             
             install_project(url, path)
                    
-            config = load_project_config(path)
+            config = load_project_config_dict(path)
                                  
             return jsonify({
                 'directory': name, 
-                'title': config.DEFAULT_CONTEXT.get("title", name)
+                'title': config.get('DEFAULT_CONTEXT').get("title", name)
             })
         except Exception, e:
             traceback.print_exc()
@@ -220,6 +222,44 @@ class TarbellAdminSite:
             traceback.print_exc()
             return jsonify({'error': str(e)})
     
+    def project_config(self):
+        """Get project config"""
+        try:
+            project = self._request_get('project')
+            project_path = self._get_path(project)
+            
+            config = load_project_config_dict(project_path)
+            
+            return jsonify(config)            
+        except Exception, e:
+            traceback.print_exc()
+            return jsonify({'error': str(e)})
+      
+    def project_config_save(self):
+        """Save project config"""
+        try:
+            project = self._request_get('project')
+            project_path = self._get_path(project)
+           
+            excludes = request.args.get('excludes', '') or []
+            if excludes:
+                excludes = excludes.split(',')
+    
+            s3_buckets = json.loads(request.args.get('s3_buckets', '[]'))
+            
+            print 'excludes', excludes
+            print 's3_buckets', s3_buckets
+            
+            raise Exception('not implemented yet')
+            
+            config = load_project_config_dict(project_path)
+                       
+            return jsonify({})        
+        except Exception, e:
+            traceback.print_exc()
+            return jsonify({'error': str(e)})
+            
+                  
     def project_update(self):
         """Update blueprint in project"""
         try:

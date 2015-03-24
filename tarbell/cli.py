@@ -30,7 +30,7 @@ if __name__ == "__main__" and __package__ is None:
     __package__ = "tarbell.cli"
 
 from .admin import TarbellAdminSite
-from .admin_utils import make_dir, delete_dir, load_project_config, \
+from .admin_utils import make_dir, delete_dir, load_project_config_dict, \
     install_requirements, install_project, install_blueprint, create_project
 
 from .oauth import get_drive_api
@@ -199,8 +199,8 @@ def tarbell_list(command, args):
         for directory in os.listdir(projects_path):
             project_path = os.path.join(projects_path, directory)
             try:
-                config = load_project_config(project_path)
-                title = config.DEFAULT_CONTEXT.get("title", directory)
+                config = load_project_config_dict(project_path)
+                title = config.get('DEFAULT_CONTEXT').get("title", directory)
                 projects.append((directory, title))
                 if len(title) > longest_title:
                     longest_title = len(title)

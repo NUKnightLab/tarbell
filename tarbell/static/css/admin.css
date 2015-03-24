@@ -75,6 +75,21 @@ textarea {
 .modal-progress > div > div {display: table-cell;text-align: center;vertical-align: middle;}
 .modal-progress i {margin-top: 10px;margin-bottom: 10px;}
 
+/*  modal tabs
+
+.modal-body .tab-content {
+    padding: 15px;
+    margin-left: -15px;
+    margin-right: -15px;
+}
+*/
+
+#detail_add_bucket,
+#detail_modal .add-bucket, 
+#detail_modal .remove-bucket {
+    padding-left: 0;
+}
+
 /*  collapse
 */
 

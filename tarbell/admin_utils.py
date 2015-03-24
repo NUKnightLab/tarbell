@@ -132,12 +132,20 @@ def copy_config_template(name, title, template, path, key, settings):
     codecs.open(os.path.join(path, "tarbell_config.py"), "w", encoding="utf-8").write(content)
     puts("\n- Done copying configuration file")
  
- 
-def load_project_config(project_path):
-    """Load project tarbell config"""
-    filename, pathname, description = imp.find_module('tarbell_config', [project_path])
-    return imp.load_module(os.path.dirname(project_path), filename, pathname, description)
-        
+def load_module_dict(module_name, module_path):
+    """Load module as a dictionary"""
+    filename, pathname, description = imp.find_module(module_name, [module_path])
+    m = imp.load_module(os.path.dirname(module_path), filename, pathname, description)
+    
+    d = dict([(varname, getattr(m, varname)) \
+        for varname in dir(m) if not varname.startswith("_") ]) 
+
+    del sys.modules[m.__name__]
+    return d
+    
+def load_project_config_dict(project_path):
+    """Load project tarbell config as a dictionary"""   
+    return load_module_dict('tarbell_config', project_path) 
         
 def list_projects(projects_dir):
     """List projects"""
@@ -146,8 +154,8 @@ def list_projects(projects_dir):
     for directory in os.listdir(projects_dir):
         project_path = os.path.join(projects_dir, directory)
         try:
-            config = load_project_config(project_path)
-            title = config.DEFAULT_CONTEXT.get("title", directory)
+            config = load_project_config_dict(project_path)
+            title = config.get('DEFAULT_CONTEXT').get("title", directory)
             projects_list.append({'directory': directory, 'title': title})
         except ImportError:
             pass

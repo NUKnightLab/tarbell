@@ -1,3 +1,5 @@
+// required jquery, json2
+
 //
 // extend jquery
 //
@@ -22,13 +24,14 @@ $.fn.extend({
 // templates
 //
 
-var _s3_bucket_template = _.template($('#s3_bucket_template').html());
+var _config_s3_bucket_template = _.template($('#config_s3_bucket_template').html());
 var _select_bucket_template = _.template($('#select_bucket_template').html());
 var _select_blueprint_template = _.template($('#select_blueprint_template').html());
 var _error_alert_template = _.template($('#error_alert_template').html());
 var _success_alert_template = _.template($('#success_alert_template').html());
 var _blueprint_template = _.template($('#blueprint_template').html());
 var _project_template = _.template($('#project_template').html());
+var _detail_s3_bucket_template = _.template($('#detail_s3_bucket_template').html());
 
 //
 // generic modal event handlers
@@ -156,6 +159,8 @@ function progress_hide() {
 function _ajax(url, type, data, on_error, on_success, on_complete) {
     var _error = '';
     
+    debug('ajax params', data);
+    
     $.ajax({
         url: url,
         type: type,
@@ -164,7 +169,7 @@ function _ajax(url, type, data, on_error, on_success, on_complete) {
         timeout: 45000, // ms
         error: function(xhr, status, err) { 
             _error = err || status;
-            debug('ajax error', _error)           
+            debug('ajax error', _error);           
             on_error(_error);
         },
         success: function(data) {
@@ -200,22 +205,22 @@ function config_dirty() {
     $('#config_save').enable();
 }
 
-function config_disable_bucket(target) {
+function disable_bucket(target) {
     var $group = $(target).closest('.form-group');
     $group.find('input').disable();
-    $group.find('.config-remove-bucket').hide();
-    $group.find('.config-add-bucket').show();
+    $group.find('.remove-bucket').hide();
+    $group.find('.add-bucket').show();
     config_dirty();
 }
 
-function config_enable_bucket(target) {
+function enable_bucket(target) {
     var $group = $(target).closest('.form-group');
     $group.find('input').enable();
-    $group.find('.config-add-bucket').hide();
-    $group.find('.config-remove-bucket').show();
+    $group.find('.add-bucket').hide();
+    $group.find('.remove-bucket').show();
 }
 
-function config_remove_bucket(target) {
+function remove_bucket(target) {
     $(target).closest('.form-group').remove();
 }
 
@@ -236,15 +241,16 @@ $(function() {
 // ------------------------------------------------------------
      
     $('#configuration_tab input').change(config_dirty);
-    
+        
     $('#config_add_bucket').click(function(event) {
         var $group = $(this).closest('.form-group');
-        $(_s3_bucket_template())
+        $(_config_s3_bucket_template())
             .insertAfter($group)
             .find('input')
                 .change(config_dirty);
     });
-               
+             
+      
     $('#config_save').click(function(event) {
          progress_show('Saving configuration');
          
@@ -323,10 +329,6 @@ $(function() {
             });
     });
 
-    $('.project-details').click(function(event) {
-        error_alert('not implemented');
-    });
-    
     $('.project-update').click(function(event) {
         alert_hide();
         
@@ -346,7 +348,8 @@ $(function() {
                 progress_hide();
             });
     });
-    
+ 
+   
 // ------------------------------------------------------------
 // newproject modal
 // ------------------------------------------------------------
@@ -410,6 +413,124 @@ $(function() {
                 
             $('#newproject_create_button').disable(); 
         });  
+
+// ------------------------------------------------------------
+// common modal
+// ------------------------------------------------------------
+    
+    $('#run_modal, #detail_modal, #generate_modal, #publish_modal')
+        .on('show.bs.modal', function(event) {
+            var directory = $(event.relatedTarget).closest('tr').attr('data-project');
+            $(this).data('data-project', directory);      
+            $('.project-name').html(directory);
+        });
+
+
+// ------------------------------------------------------------
+// detail modal
+// ------------------------------------------------------------
+
+    $('#detail_button').click(function(event) {
+        var $modal = $('#detail_modal');
+        var project = $modal.data('data-project');
+                
+        var title = $('#detail_title').val().trim();
+        if(!title) {
+            $modal.trigger('error_show', 'You must enter a title');
+            return;
+        }
+
+        var error = '';
+        var s3_buckets = [];
+        $('#detail_bucket_form .form-group').each(function(i, el) {
+            var $el = $(el);
+            var name = $el.find('.bucket-name').val().trim();
+            var url = $el.find('.bucket-url').val().trim();
+            
+            if((name || url) && !(name && url)) {
+                error = 'You specify a name and URL for each bucket';
+                return;
+            }           
+            s3_buckets.push({name: name, url: url});
+        });
+        if(error) {
+            $modal.trigger('error_show', error);
+            return false;       
+        }             
+        
+        
+        ajax_get('/project/config/save/', {
+                project: project,
+                title: title,
+                context_source_file: $('#detail_context_source_file').val().trim(),
+                spreadsheet_key: $('#detail_spreadsheet_key').val().trim(),
+                spreadsheet_cache_ttl: $('#detail_spreadsheet_cache_ttl').val().trim(),
+                create_json: $("#detail_create_json").prop('checked'),
+                excludes: $('#detail_excludes').val().trim(),
+                s3_buckets: JSON.stringify(s3_buckets)
+            },
+            function(error) {
+                $modal.trigger('error_show', error);
+            },
+            function(data) {
+                // doit
+            },
+            function() {
+                $modal.trigger('progress_hide');
+            });
+    });
+
+    $('#detail_add_bucket').click(function(event) {   
+        $('#detail_bucket_form').prepend(_detail_s3_bucket_template());
+    });
+
+
+    modal_init($('#detail_modal'))
+        .on('init', function(event, config) {            
+            $('#detail_title').val((config.DEFAULT_CONTEXT || {}).title);
+            $('#detail_context_source_file').val(config.CONTEXT_SOURCE_FILE || '');
+            
+            $('#detail_spreadsheet_key').val(config.SPREADSHEET_KEY || '');
+            $('#details_spreadsheet_cache_ttl').val(config.SPREADSHEET_CACHE_TTL || '');        
+            $("#detail_create_json").prop('checked', config.CREATE_JSON);
+
+            $('#detail_excludes').val((config.EXCLUDES || []).join(','));
+            
+            var html = '';
+            for(var name in (config.S3_BUCKETS || {})) {
+                html += _detail_s3_bucket_template({
+                        name: name, url: config.S3_BUCKETS[name]
+                });
+            }
+            $('#detail_bucket_form').html(html);
+        })
+        .on('details', function(event) {           
+            var $modal = $(this)
+                .trigger('progress_show', 'Loading project details');
+
+            var project = $modal.data('data-project');
+               
+            ajax_get('/project/config/', {project: project},
+                function(error) {
+                    $modal.trigger('error_show', error);
+                },
+                function(data) {
+                    $modal.trigger('init', data);
+                },
+                function() {
+                    $modal.trigger('progress_hide');
+                });
+        })
+        .on('show.bs.modal', function(event) {
+            $(this)
+                .trigger('error_hide')
+                .trigger('success_hide')
+                .trigger('progress_hide')
+                .trigger('init', {})
+                .trigger('details'); 
+            
+            console.log('show.bs.modal', $(this).data('data-project'));
+        })
  
 // ------------------------------------------------------------
 // generate modal
@@ -576,14 +697,5 @@ $(function() {
         );
     });
         
-    //
-    // Common
-    //
-    
-    $('#run_modal, #generate_modal, #publish_modal').on('show.bs.modal', function(event) {
-        var directory = $(event.relatedTarget).closest('tr').attr('data-project');
-        $(this).data('data-project', directory);      
-        $('.project-name').html(directory);
-    });
-    
+     
 });
