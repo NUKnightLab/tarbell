@@ -362,6 +362,7 @@ $(function() {
   
     $('#newproject_button').click(function(event) {
         var $modal = $('#newproject_modal')
+            .trigger('error_hide')
             .trigger('progress_show', 'Creating project');
         
         var emails = $("#newproject_spreadsheet").is(':checked') ? 
@@ -377,7 +378,9 @@ $(function() {
                 $modal.trigger('error_show', error);
             },
             function(data) {
-                
+                $('#projects_table tbody').append(_project_template(data));
+                success_alert('Successfully created project <strong>'+data.title+'</strong>');   
+                $modal.modal('hide');                           
             },
             function() {
                 $modal.trigger('progress_hide');

@@ -3,8 +3,10 @@
 """
 tarbell.admin_utils
 ~~~~~~~~~
+
 This module provides utilities for Tarbell cli and admin.
 """
+
 import codecs
 import glob
 import imp
@@ -130,12 +132,13 @@ def copy_config_template(name, title, template, path, key, settings):
     codecs.open(os.path.join(path, "tarbell_config.py"), "w", encoding="utf-8").write(content)
     puts("\n- Done copying configuration file")
  
+ 
 def load_project_config(project_path):
     """Load project tarbell config"""
     filename, pathname, description = imp.find_module('tarbell_config', [project_path])
     return imp.load_module(os.path.dirname(project_path), filename, pathname, description)
-
-                   
+        
+        
 def list_projects(projects_dir):
     """List projects"""
     projects_list = []
@@ -151,7 +154,7 @@ def list_projects(projects_dir):
     
     return projects_list
     
-
+    
 def install_blueprint(blueprint_url, settings):
     """
     Install blueprint
@@ -189,7 +192,6 @@ def install_blueprint(blueprint_url, settings):
         return data
     except ImportError:
         raise Exception('No blueprint.py found')
-
     except sh.ErrorReturnCode_128, e:
         if e.stdout.strip('\n').endswith('Device not configured'):
             _DeviceNotConfigured()
@@ -220,7 +222,7 @@ def install_project(project_url, project_path):
         
         install_requirements(project_path)
 
-        return git
+        return git # for hooks
     except sh.ErrorReturnCode_128, e:
         if e.message.endswith('Device not configured\n'):
             _DeviceNotConfigured()
@@ -231,8 +233,6 @@ def install_project(project_url, project_path):
         raise e
     finally:
         delete_dir(tempdir)
-        
-
         
                    
 def _add_user_to_file(file_id, service, user_email, perm_type='user', role='writer'):
@@ -253,14 +253,14 @@ def _add_user_to_file(file_id, service, user_email, perm_type='user', role='writ
         raise Exception('Error adding users to spreadsheet: {0}'.format(e))
 
   
-def _create_spreadsheet(name, title, path, settings, emails):
+def _create_spreadsheet(path, name, title, emails, settings):
     """Create Google spreadsheet"""    
     try:
         media_body = _MediaFileUpload(
             os.path.join(path, '_blueprint/_spreadsheet.xlsx'),
             mimetype='application/vnd.ms-excel')
     except IOError:
-        print "_blueprint/_spreadsheet.xlsx doesn't exist!"
+        show_error("_blueprint/_spreadsheet.xlsx doesn't exist!")
         return None
     
     service = get_drive_api()
@@ -285,9 +285,7 @@ def _create_spreadsheet(name, title, path, settings, emails):
 
 
 def _copy_blueprint_files(project_path):
-    """
-    Copy blueprint html files
-    """
+    """Copy blueprint html files"""
     puts(colored.green("\nCopying html files..."))
     files = glob.iglob(os.path.join(project_path, "_blueprint", "*.html"))
     for file in files:
@@ -296,12 +294,15 @@ def _copy_blueprint_files(project_path):
             if not filename.startswith("_") and not filename.startswith("."):
                 puts("Copying {0} to {1}".format(filename, project_path))
                 shutil.copy2(file, project_path)
-    ignore = os.path.join(path, "_blueprint", ".gitignore")
+    ignore = os.path.join(project_path, "_blueprint", ".gitignore")
     if os.path.isfile(ignore):
         shutil.copy2(ignore, project_path)
     
 
-def create_project(path, name, title, template, spreadsheet_emails, settings):
+def create_project(path, name, title, template, emails, settings):
+    """Create a project"""
+    key = None
+    
     # Init repo
     git = sh.git.bake(_cwd=path)
     puts(git.init())
@@ -317,10 +318,10 @@ def create_project(path, name, title, template, spreadsheet_emails, settings):
         puts(submodule.checkout(VERSION))
         
         # Create spreadsheet?
-        if spreadsheet_emails:
-            key = _create_spreadsheet(name, title, path, settings, spreadsheet_emails)
+        if emails:
+            key = _create_spreadsheet(path, name, title, emails, settings)
 
-        # Copy html files
+        # Copy blueprint html files
         _copy_blueprint_files(path)
     else:
         # Create empty index.html
@@ -338,6 +339,6 @@ def create_project(path, name, title, template, spreadsheet_emails, settings):
     # Install requirements
     install_requirements(path)
     
-    return git
+    return git  # for hooks
     
 

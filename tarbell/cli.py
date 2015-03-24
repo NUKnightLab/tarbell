@@ -30,8 +30,8 @@ if __name__ == "__main__" and __package__ is None:
     __package__ = "tarbell.cli"
 
 from .admin import TarbellAdminSite
-from .admin_utils import make_dir, delete_dir, install_requirements, \
-    install_project, install_blueprint, create_project
+from .admin_utils import make_dir, delete_dir, load_project_config, \
+    install_requirements, install_project, install_blueprint, create_project
 
 from .oauth import get_drive_api
 from .contextmanagers import ensure_settings, ensure_project
@@ -173,10 +173,10 @@ def tarbell_install(command, args):
 def tarbell_install_blueprint(command, args):
     """Install a project blueprint."""
     with ensure_settings(command, args) as settings:
-        template_url = args.get(0)
+        blueprint_url = args.get(0)
     
         try:
-            data = install_blueprint(template_url, settings)
+            data = install_blueprint(blueprint_url, settings)
             puts("\n+ Added new project template: {0}".format(colored.yellow(data['name'])))
         except Exception, e:
             show_error(str(e))    
@@ -199,8 +199,7 @@ def tarbell_list(command, args):
         for directory in os.listdir(projects_path):
             project_path = os.path.join(projects_path, directory)
             try:
-                filename, pathname, description = imp.find_module('tarbell_config', [project_path])
-                config = imp.load_module(directory, filename, pathname, description)
+                config = load_project_config(project_path)
                 title = config.DEFAULT_CONTEXT.get("title", directory)
                 projects.append((directory, title))
                 if len(title) > longest_title:

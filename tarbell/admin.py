@@ -24,7 +24,7 @@ from .contextmanagers import ensure_project
 from .utils import puts, clean_suffix
 from .admin_utils import make_dir, delete_dir, install_requirements, \
     install_project, install_blueprint, \
-    load_project_config, list_projects
+    load_project_config, list_projects, create_project
 
 class TarbellAdminSite:
     def __init__(self, settings,  quiet=False):
@@ -153,21 +153,21 @@ class TarbellAdminSite:
             name, title, blueprint = self._request_get('name', 'title', 'blueprint')
             spreadsheet_emails = request.args.get('spreadsheet_emails')            
             
-
             print 'name', name
             print 'title', title
             print 'blueprint', blueprint
             print 'google', spreadsheet_emails
-            print 'mkdir', path        
-
-            raise Exception('NOT IMPLEMENTED')
-
+            
             path = self._get_path(name) 
             make_dir(path)
             
+            print 'mkdir', path        
+
             try:
-                template = settings.config['project_templates'][int(blueprint) - 1]
-                create_project(path, name, title, template, spreadsheet_emails, self.settings)                               
+                template = self.settings.config['project_templates'][int(blueprint) - 1]
+                create_project(path, name, title, template, spreadsheet_emails, self.settings)  
+                
+                return(jsonify({'directory': name, 'title': title}))                             
             except Exception, e:
                 delete_dir(path)
                 raise e
