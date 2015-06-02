@@ -22,11 +22,33 @@
     <a href="http://www.tarbell.io/" target="_blank">tarbell.io</a>&nbsp;&nbsp;{{ version }}
 </div>
 
-<ul class="nav nav-tabs" role="tablist">
+<ul class="nav nav-tabs" role="tablist" id="tab_list">
+    <li><a href="#projects_tab" role="tab" data-toggle="tab">Projects</a></li>
     <li class="active"><a href="#settings_tab" role="tab" data-toggle="tab">Settings</a></li>
 </ul>
 
 <div id="tab_content" class="tab-content" style="display: none;">
+
+<div class="tab-pane" id="projects_tab">   
+    <div id="projects_alert" class="alert alert-info hide" role="alert">
+        <strong>No Tarbell projects found!</strong>
+        <p>Run <code>tarbell newproject &lt;project&gt;</code> from the command line to create a new project.</p>
+    </div>
+    <div class="row">
+        <div class="col-xs-12">
+            <button class="btn btn-primary pull-right" data-toggle="modal" data-target="#new_modal">New Project</button>
+        </div>
+    </div>
+    <table class="table" id="projects_table">
+        <thead>
+            <th class="col-xs-4">Directory</th>
+            <th class="col-xs-8">Title</th>
+        </thead>
+        <tbody>
+        </tbody>        
+    </table>     
+</div> <!-- // projects_tab-->
+
 
 <div class="tab-pane active" id="settings_tab">   
 
@@ -64,7 +86,7 @@
                     Enter the Google account(s) that should have access to new spreadsheets, separating multiple addresses with commas.
                     Leave this field blank to specify accounts for each new project.
                 </p>
-                <textarea id="google_emails" class="form-control google-emails" rows="3" placeholder="somebody@gmail.com" aria-describedby="google_emails_help"></textarea>
+                <textarea id="google_emails" class="form-control google-emails" rows="3" placeholder="somebody@gmail.com"></textarea>
             </div>
         </form>
     </div>
@@ -134,7 +156,7 @@
                 This is where your Tarbell projects will be located.  This path will be used by <code>tarbell list</code> and <code>tarbell switch</code>.
             </p>
             <input type="text" class="form-control" id="projects_path" value="" 
-                placeholder="{{ defaults.projects_path }}" aria-describedby="projects_path_help">
+                placeholder="{{ defaults.projects_path }}">
         </div>
     </form>
 </p>
@@ -182,13 +204,111 @@
                         <p class="form-control-static modal-msg"></p>
                     </div>
                     <div class="form-group">
-                        <input type="text" class="form-control" val="" placeholder="enter your confirmation code">
+                        <input type="text" class="form-control" value="" placeholder="enter your confirmation code">
                     </div>               
                 </form>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-default">Cancel</button>
                 <button type="button" class="btn btn-primary">Submit Code</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: new project -->
+<div id="new_modal" class="modal fade" data-backdrop="static" data-keyboard="false">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title">New Project</h4>
+            </div>
+            <div class="modal-body">
+                <p class="modal-error bg-danger">
+                    <span class="modal-msg text-danger"></span>
+                </p>
+                <div class="new-project">
+                    <form>
+                        <div class="form-group">
+                            <label class="control-label" for="new_name">Short directory name</label>
+                            <input type="text" class="form-control" id="new_name" placeholder="my_project">
+                        </div>
+                        <div class="form-group">
+                            <label class="control-label" for="new_title">Full project title</label>
+                            <input type="text" class="form-control" id="new_title" placeholder="My Awesome Project">
+                        </div>
+                        <div class="form-group">
+                            <label class="control-label" for="new_blueprint">Blueprint</label>
+                            <select id="new_blueprint" class="form-control">
+                                <!-- load blueprints here using select_blueprint_template -->
+                            </select>
+                        </div>              
+                    </form>
+                </div>
+               <div class="new-spreadsheet">
+                    <form>
+                        <div class="form-group">
+                            <label class="control-label" for="new_emails">
+                                What Google account(s) should have access to this project's spreadsheet?
+                            </label>
+                            <textarea id="new_emails" class="form-control" rows="3"></textarea>
+                            <p class="help-block">
+                                Use a full email address, such as &quot;your.name@gmail.com&quot;.
+                                Separate multiple addresses with commas.
+                            </p>
+                        </div>
+                    </form>
+               </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default new-project" data-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success new-project" id="new_project_button">Create Project</button>
+                <button type="button" class="btn btn-default new-spreadsheet" data-dismiss="modal">Skip</button>
+                <button type="button" class="btn btn-success new-spreadsheet" id="new_spreadsheet_button">Create Spreadsheet</button>
+            </div>
+            <div class="modal-progress" style="display: none;">
+                <div>
+                    <div>
+                        <i class="fa fa-3x fa-spinner fa-spin"></i>
+                        <p><span class="modal-msg"></span>...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: run project -->
+<div id="run_modal" class="modal fade" data-backdrop="static" data-keyboard="false">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title">Run Project</h4>
+            </div>
+            <div class="modal-body">
+                <p class="modal-error bg-danger">
+                    <span class="modal-msg text-danger"></span>
+                </p>
+                <form class='form-horizontal'>
+                    <div class="form-group">
+                        <label for="run_address" class="col-xs-2 control-label">Address</label>
+                        <div class="col-xs-10">
+                            <input type="text" class="form-control" id="run_address" value="127.0.0.1:5000" placeholder="127.0.0.1:5000">
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" id="run_done_button" data-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success" id="run_button">Run</button>
+            </div>
+            <div class="modal-progress" style="display: none;">
+                <div>
+                    <div>
+                        <i class="fa fa-3x fa-spinner fa-spin"></i>
+                        <p><span class="modal-msg"></span>...</p>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -209,6 +329,15 @@
         <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
         <%= message %>
     </div>
+</script>
+
+<script type="text/template" id="project_template">
+    <tr data-project="<%= d.DEFAULT_CONTEXT.name %>">
+        <td><%= d.DEFAULT_CONTEXT.name %></td>
+        <td><a role="button" class="project-title" title="Run this project" data-toggle="modal" data-target="#run_modal">
+            <%= d.DEFAULT_CONTEXT.title %></a>
+        </td>
+    </tr>
 </script>
 
 <script type="text/template" id="google_msg_template">
@@ -255,6 +384,11 @@
         </div>
     </div>                            
 </script>
+
+<script type="text/template" id="select_blueprint_template">
+    <option value="<%= d.url %>"><%= d.name %></option>
+</script>
+
 
 
 <script type="text/javascript" src="/static/js/admin-util.js"></script>

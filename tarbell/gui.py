@@ -16,7 +16,11 @@ from tarbell import __VERSION__ as VERSION
 
 from .admin import DEFAULT_BLUEPRINTS, props, safe_write, \
     get_or_create_config, \
-    client_secrets_authorize_url, client_secrets_authorize
+    client_secrets_authorize_url, client_secrets_authorize, \
+    list_projects, \
+    make_project_config, read_project_config, write_project_config, \
+    create_project, create_spreadsheet, run_project
+    
 from .settings import Settings
 
 
@@ -49,6 +53,15 @@ class TarbellAdminSite:
                                         
         self.app.add_url_rule('/config/save/',
             view_func=self.config_save, methods=['POST'])
+
+        self.app.add_url_rule('/projects/list/',
+             view_func=self.projects_list)
+        self.app.add_url_rule('/project/create/',
+             view_func=self.project_create)
+        self.app.add_url_rule('/spreadsheet/create/',
+            view_func=self.spreadsheet_create)
+        self.app.add_url_rule('/project/run/', 
+            view_func=self.project_run)
              
     def _request_get(self, *keys):
         """Get request data"""
@@ -84,6 +97,22 @@ class TarbellAdminSite:
         """Get path for client_secrets"""
         return os.path.join(
             os.path.dirname(self.settings.path), "client_secrets.json")     
+
+    def _project_path(self, name):
+        """Get path for project"""
+        return os.path.join(
+            self.settings.config.get('projects_path'), name)
+    
+    def _env_path(self, name):
+        """Get path for virtual env"""
+        return os.path.join(
+            os.path.dirname(self.settings.path), 'env', name)
+    
+    def _spreadsheet_path(self, name):
+        """Get path for blueprint spreadsheet"""
+        return os.path.join(
+            self._project_path(name), '_blueprint', '_spreadsheet.xlsx')
+            
           
     def main(self):
         """Main view"""
@@ -171,4 +200,153 @@ class TarbellAdminSite:
         except Exception, e:
             traceback.print_exc()
             return jsonify({'error': str(e)})
+            
+            
+    def projects_list(self):
+        """Get a list of projects"""
+        try:
+            projects = list_projects(
+                self.settings.config.get('projects_path'))   
+            return jsonify({'projects': projects})
+        except Exception, e:
+            traceback.print_exc()
+            return jsonify({'error': str(e)})            
+
+
+    def project_create(self):
+        """Create a new project"""
+        try:
+            name, title = self._request_get_required(
+                'name', 'title')
+            blueprint_url = self._request_get('blueprint')
+            
+            # Check project path           
+            project_path = self._project_path(name)
+            if os.path.exists(project_path):
+                raise Exception(
+                    'The project directory "%s" already exists.' \
+                    '  Please choose a different directory name.' \
+                    % project_path)
+ 
+            # Check blueprint
+            blueprint = None
+                        
+            for b in self.settings.config['project_templates']:
+                if blueprint_url == b.get('url'):
+                    blueprint = b
+                    break
+                    
+            if not blueprint:
+                raise Exception(
+                    'Unknown blueprint "%s"' % blueprint_url)       
+ 
+            # Make env path
+            env_path = self._env_path(name)
+            
+            # Make project config
+            config = make_project_config(self.settings.config, name, title)
+            
+            # Create the project            
+            create_project(env_path, project_path, blueprint, config)
+
+            # Should we ask user to create a spreadsheet?
+            spreadsheet_path = self._spreadsheet_path(name)
+            return jsonify({
+                'spreadsheet': int(self.settings.client_secrets and \
+                    os.path.exists(spreadsheet_path))
+            })
+            
+        except Exception, e:
+            traceback.print_exc()
+            return jsonify({'error': str(e)})   
+
+            
+    def spreadsheet_create(self):
+        """Create spreadsheet for project"""
+        try:
+            name, emails = self._request_get_required(
+                'name', 'emails')
+            
+            project_path = self._project_path(name)
+            project_config = read_project_config(project_path) 
+            
+            spreadsheet_path = self._spreadsheet_path(name)
+            print 'creating %s' % spreadsheet_path
+            
+            key = create_spreadsheet(
+                spreadsheet_path,
+                project_config['DEFAULT_CONTEXT']['name'],
+                project_config['DEFAULT_CONTEXT']['title'],
+                emails
+            )
+ 
+            project_config['SPREADSHEET_KEY'] = key            
+            write_project_config(project_path, project_config)
+            
+            return jsonify({'key': key})
+        except Exception, e:
+            traceback.print_exc()
+            return jsonify({'error': str(e)})
+          
+
+    def project_run(self):
+        """Run preview server for project"""
+        try:
+            project, address = self._request_get_required(
+                'project', 'address')
+
+            project_path = self._project_path(project)
+            if not os.path.exists(project_path):
+                raise Exception(
+                    'The project directory "%s" does not exist' % path)
+
+            m = re.match(r'([\w.]+):(\d+)', address)   
+            if not m:
+                raise Exception('Invalid "address" parameter')
+
+            ip = m.group(1)
+            port = m.group(2)
+                     
+            # Path to virtualenv
+            env_path = self._env_path(project)
+            if not os.path.exists(env_path):
+                raise Exception(
+                    'The virtual environment for this project does not exist')
+            # Ok, so maybe create virtual env here?  I dunno
+                                
+           
+            proc = run_project(env_path, project_path, ip, port)
+            
+            # Wait for server to come up  
+            r = None        
+            for i in [1, 2, 3]:
+                time.sleep(2)
+                                
+                try:
+                    print 'Waiting for server @ http://%s' % address
+                    r = requests.get('http://'+address, timeout=3)
+                
+                    if r.status_code == requests.codes.ok:
+                        return jsonify({})       
+                except requests.exceptions.ConnectionError, e:
+                    # If the server isn't running at all...
+                    print 'ERROR', e    
+            
+            if r is not None:
+                return jsonify({'warning': \
+                    'Started preview server with error (%d)' \
+                        % r.status_code}) 
+          
+            ret = proc.poll()
+            if ret:
+                (stdout_data, stderr_data) = proc.communicate()
+                print stdout_data
+                raise Exception('Could not start preview server: %s' % stderr_data)
+                  
+            raise Exception('Could not start preview server')
+
+ 
+        except Exception, e:
+            traceback.print_exc()
+            return jsonify({'error': str(e)})   
          

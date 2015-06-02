@@ -13,6 +13,11 @@ var _google_msg_template = _.template($('#google_msg_template').html());
 var _edit_bucket_template = _.template($('#edit_bucket_template').html());
 var _add_bucket_template = _.template($('#add_bucket_template').html());
 
+var _project_template = _.template($('#project_template').html());
+
+var _select_blueprint_template = _.template($('#select_blueprint_template').html());
+
+
 //
 // progress modal
 //
@@ -86,6 +91,36 @@ function success_alert(message) {
     success_hide();
     $('div.tab-pane.active').prepend(_success_alert_template({message: message}));    
 }
+
+//
+// projects
+//
+
+function show_projects() {
+    ajax_get('/projects/list/', {},
+        function(error) {
+            $('#projects_alert').hide();
+            $('#projects_table').hide();
+            error_alert('Error listing projects ('+error+')');
+        },
+        function(data) {    
+            var projects = data.projects;    
+            var html = '';
+    
+            for(var i = 0; i < projects.length; i++) {
+                html += _project_template({d: projects[i]});
+            }    
+            if(projects.length) {
+                $('#projects_alert').hide();
+                $('#projects_table tbody').html(html);
+                $('#projects_table').show();
+            } else {
+                $('#projects_alert').show();
+                $('#projects_table').hide();        
+            }
+        });
+}
+
 
 //
 // settings
@@ -389,12 +424,164 @@ $(function() {
                 progress_hide();
             });
     });
-  
+
+// ------------------------------------------------------------
+// new modal
+// ------------------------------------------------------------
+
+    var $new_modal = modal_init($('#new_modal'))
+        .on('show.bs.modal', function(event) {
+            $new_modal
+                .trigger('all_hide')
+                .find('.form-group').removeClass('has-error');
+            
+            $('#new_name, #new_title').val("");
+            $('#new_emails').val(_config.google_account);
+            
+            var html = '';            
+            for(var i = 0; i < _config.project_templates.length; i++) {
+                html += _select_blueprint_template({d: _config.project_templates[i]});
+            }
+            $('#new_blueprint').html(html);
+            
+            $new_modal.find('.new-project').show();
+            $new_modal.find('.new-spreadsheet').hide();
+        })
+        .on('hide.bs.modal', function(event) {
+            show_projects();
+        })
+        .on('change', '#new_name, #new_title, #new_emails', function(event) {
+            if($(this).val().trim()) {
+                $(this).closest('.form-group').removeClass('has-error'); 
+            }
+        })
+        .on('click', '#new_project_button', function(event) {        
+            $new_modal.trigger('all_hide');
+            
+            var name = $('#new_name').val().trim();
+            if(!name) {
+                $('#new_name').closest('.form-group').addClass('has-error');
+            }
+            
+            var title = $('#new_title').val().trim();
+            if(!title) {
+                $('#new_title').closest('.form-group').addClass('has-error');
+            }
+            
+            if(!(name && title)) {
+                return;
+            }
+
+            $new_modal.trigger('progress_show', 'Creating project');
+            
+            ajax_get('/project/create/', {
+                    name: name,
+                    title: title,
+                    blueprint: $('#new_blueprint').val()
+                },
+                function(error) {
+                    $new_modal.trigger('error_show', error);
+                },
+                function(data) {
+                    if(data.spreadsheet) {
+                        $new_modal.find('.new-project').hide();
+                        $new_modal.find('.new-spreadsheet').show();  
+                    } else {
+                        $new_modal.modal('hide');
+                    }   
+                },
+                function() {
+                    $new_modal.trigger('progress_hide');
+                });
+        })
+        .on('click', '#new_spreadsheet_button', function(event) {
+            var emails = $('#new_emails').val().trim();
+            if(!emails) {
+                $('#new_emails').closest('.form-group').addClass('has-error');
+                return;
+            }
+           
+            $new_modal.trigger('progress_show', 'Creating spreadsheet');
+            
+            ajax_get('/spreadsheet/create/', {
+                    name: $('#new_name').val().trim(),
+                    emails: emails
+                },
+                function(error) {
+                    $new_modal.trigger('error_show', error);
+                },
+                function(data) {
+                    $new_modal.modal('hide');
+                },
+                function() {
+                    $new_modal.trigger('progress_hide');           
+                });      
+        });
+
+// ------------------------------------------------------------
+// run modal
+// ------------------------------------------------------------
+
+    var $run_modal = modal_init($('#run_modal'))
+        .on('show.bs.modal', function(event) {
+            $run_modal.trigger('all_hide');
+            
+            $(this).data('data-project', 
+                $(event.relatedTarget).closest('tr').attr('data-project'));  
+            
+            $('#run_address').val('127.0.0.1:5000').enable();
+            $('#run_done_button, #run_button').show();              
+            $('#run_stop_button').hide();
+        })
+        .on('click', '#run_button', function(event) {   
+            $run_modal.trigger('all_hide');
+            
+            var project = $run_modal.data('data-project');
+           
+            var $address = $('#run_address');
+            var address = $address.val().trim();
+            if(!address) {
+                $address.focus().closest('.form-group').addClass('has-error');
+                return;
+            }
+            $address.closest('.form-group').removeClass('has-error');
+            
+            $run_modal.trigger('progress_show', 'Starting preview server');
+    
+            ajax_get('/project/run/', {
+                    project: project,
+                    address: address
+                }, 
+                function(error) {
+                    $run_modal.trigger('error_show', error);
+                },
+                function(data) {
+                    if(data.warning) {
+                        $run_modal.trigger('error_show', data.warning);
+                    }
+                    window.open('http://'+address);
+            
+                    $('#run_address').disable();
+                    $('#run_done_button, #run_button').hide();   
+                },
+                function() {
+                    $run_modal.trigger('progress_hide');
+                }
+            );
+        }); 
+           
 // ------------------------------------------------------------
 // Main
 // ------------------------------------------------------------
 
     show_settings();
+    
+    if(_settings.file_missing) {
+        $('#tab_list a[href="#settings_tab"]').tab('show')
+    } else {
+        show_projects();
+        $('#tab_list a[href="#projects_tab"]').tab('show')
+    }
     $('#tab_content').show();
     
 });
