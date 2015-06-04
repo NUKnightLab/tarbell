@@ -234,7 +234,7 @@ class TarbellAdminSite:
             blueprint = None
                         
             for b in self.settings.config['project_templates']:
-                if blueprint_url == b.get('url'):
+                if blueprint_url == b.get('url', ''):
                     blueprint = b
                     break
                     

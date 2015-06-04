@@ -30,24 +30,35 @@
 <div id="tab_content" class="tab-content" style="display: none;">
 
 <div class="tab-pane" id="projects_tab">   
-    <div id="projects_alert" class="alert alert-info hide" role="alert">
+    <div id="projects_alert" class="alert alert-info" role="alert">
         <strong>No Tarbell projects found!</strong>
-        <p>Run <code>tarbell newproject &lt;project&gt;</code> from the command line to create a new project.</p>
     </div>
     <div class="row">
-        <div class="col-xs-12">
+        <div class="col-xs-10">
+            <div class="input-group">
+                <input type="text" class="form-control" placeholder="Enter the github url for a project">
+                <span class="input-group-btn">
+                    <button class="btn btn-default" type="button">Install Project</button>
+                </span>
+            </div>
+        </div>
+        <div class="col-xs-2">
             <button class="btn btn-primary pull-right" data-toggle="modal" data-target="#new_modal">New Project</button>
         </div>
     </div>
-    <table class="table" id="projects_table">
-        <thead>
-            <th class="col-xs-4">Directory</th>
-            <th class="col-xs-8">Title</th>
-            <th><!-- icons --></th>
-        </thead>
-        <tbody>
-        </tbody>        
-    </table>     
+    <div class="row">
+        <div class="col-xs-12">
+            <table class="table" id="projects_table">
+                <thead>
+                    <th class="col-xs-4">Directory</th>
+                    <th class="col-xs-8">Title</th>
+                    <th><!-- icons --></th>
+                </thead>
+                <tbody>
+                </tbody>        
+            </table>  
+        </div>   
+    </div>
 </div> <!-- // projects_tab-->
 
 
@@ -350,13 +361,17 @@
 </script>
 
 <script type="text/template" id="project_template">
-    <tr data-project="<%= d.DEFAULT_CONTEXT.name %>">
+    <tr class="project-row" data-project="<%= d.DEFAULT_CONTEXT.name %>">
         <td><%= d.DEFAULT_CONTEXT.name %></td>
         <td><a role="button" class="project-title" title="Run this project" data-toggle="modal" data-target="#run_modal">
             <%= d.DEFAULT_CONTEXT.title %></a>
         </td>
-        <td>
-            <a class="text-danger" href="javascript:" onclick="project_delete(this)">
+        <td class="project-actions">
+            <a href="javascript:" title="Edit project settings" onclick="project_edit(this)">
+                <i class="fa fa-lg fa-cog"></i></a>
+            <a href="javascript:" title="Publish this project" onclick="project_publish(this)">
+                <i class="fa fa-lg fa-cloud-upload"></i></a>
+            <a href="javascript:" class="text-danger" title="Delete this project" onclick="project_delete(this)">
                 <i class="fa fa-lg fa-trash-o"></i></a>
         </td>
     </tr>

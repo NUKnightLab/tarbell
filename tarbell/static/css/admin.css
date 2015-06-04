@@ -75,18 +75,35 @@ p.section:first-child {
 /*  misc
 */
 
-.bucket-disable, .bucket-enable, .bucket-add, .bucket-remove {
-    padding-left: 6px;
-    padding-right: 6px;
-}
-
-.bucket-control-text {text-align: right;}
 
 #site_link {
     position: absolute;
     top: 11px;
     right: 16px;
 }
+
+
+/* projects tab
+*/
+
+#projects_table {
+    margin-top: 20px;
+}
+
+.project-title {
+    cursor: pointer;
+}
+
+.project-actions {
+    white-space: nowrap;
+}
+
+.project-actions a {
+    margin-left: 10px;
+}
+
+/* settings tab 
+*/
 
 /* inset collapse-ables on settings tab */
 #settings_tab div.collapse, 
@@ -101,4 +118,12 @@ p.section:first-child {
     padding-left: 30px;
     padding-right: 30px;
 }
+
+.bucket-disable, .bucket-enable, .bucket-add, .bucket-remove {
+    padding-left: 6px;
+    padding-right: 6px;
+}
+
+.bucket-control-text {text-align: right;}
+
 

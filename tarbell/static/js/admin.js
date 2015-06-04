@@ -119,6 +119,8 @@ function success_alert(message) {
 //
 
 function show_projects() {
+    console.log('show_projects')
+    
     ajax_get('/projects/list/', {},
         function(error) {
             $('#projects_alert').hide();
@@ -132,6 +134,8 @@ function show_projects() {
             for(var i = 0; i < projects.length; i++) {
                 html += _project_template({d: projects[i]});
             }    
+            console.log(projects.length);
+            
             if(projects.length) {
                 $('#projects_alert').hide();
                 $('#projects_table tbody').html(html);
@@ -142,6 +146,23 @@ function show_projects() {
             }
         });
 }
+
+// Edit project settings
+function project_edit(target) {
+    var $row = $(target).closest('tr');
+    var name = $row.attr('data-project');
+
+    alert('not implemented yet');
+}
+
+// Publish project
+function project_publish(target) {
+    var $row = $(target).closest('tr');
+    var name = $row.attr('data-project');
+
+    alert('not implemented yet');
+}
+
 
 // Delete a project
 function project_delete(target) {
@@ -160,7 +181,7 @@ function project_delete(target) {
                     },
                     function(data) {
                         $row.remove();
-                        success_alert('Project deleted');               
+                        show_projects();
                     },
                     function() {
                         progress_hide();
@@ -533,6 +554,8 @@ $(function() {
                     $new_modal.trigger('error_show', error);
                 },
                 function(data) {
+                    show_projects();
+                    
                     if(data.spreadsheet) {
                         $new_modal.find('.new-project').hide();
                         $new_modal.find('.new-spreadsheet').show();  
