@@ -13,13 +13,12 @@ import yaml
 import shutil
 
 from subprocess import call
-from datetime import datetime
 from clint.textui import colored
 from tarbell import LONG_VERSION
 
 from .settings import Settings
 from .oauth import get_drive_api_from_client_secrets
-from .utils import puts, show_error
+from .utils import puts, show_error, backup
 
 
 def tarbell_configure(command, args):
@@ -79,7 +78,7 @@ def get_or_create_config(path, prompt=True):
         with open(path, 'r+') as f:
             if os.path.isfile(path):
                 puts("{0} already exists, backing up".format(colored.green(path)))
-                _backup(dirname, filename)
+                backup(dirname, filename)
             return yaml.load(f)
     except IOError:
         return {}
@@ -125,7 +124,7 @@ def _setup_google_spreadsheets(settings, path, prompt=True):
                      colored.green(dirname))
         )
 
-        _backup(dirname, "client_secrets.json")
+        backup(dirname, "client_secrets.json")
         try:
             shutil.copy(secrets_path, os.path.join(dirname, 'client_secrets.json'))
         except shutil.Error, e:
@@ -322,19 +321,3 @@ def _setup_default_templates(settings, path, prompt=True):
     puts("\n- Done configuring project templates.")
     return {"project_templates": project_templates}
 
-
-def _backup(path, filename):
-    """Backup a file."""
-    target = os.path.join(path, filename)
-    if os.path.isfile(target):
-        dt = datetime.now()
-        new_filename = ".{0}.{1}.{2}".format(
-            filename, dt.isoformat(), "backup"
-        )
-        destination = os.path.join(path, new_filename)
-        puts("- Backing up {0} to {1}".format(
-            colored.cyan(target),
-            colored.cyan(destination)
-        ))
-
-        shutil.copy(target, destination)

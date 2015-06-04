@@ -6,9 +6,10 @@ tarbell.utils
 
 This module provides utilities for Tarbell.
 """
-
+from datetime import datetime
 import os
 import sys
+
 from clint.textui import colored, puts as _puts
 import shutil
 
@@ -91,4 +92,21 @@ def delete_dir(path):
             raise Exception(str(e))
     except UnboundLocalError:
         pass
+
+
+def backup(path, filename):
+    """Backup a file"""
+    target = os.path.join(path, filename)
+    if os.path.isfile(target):
+        dt = datetime.now()
+        new_filename = ".{0}.{1}.{2}".format(
+            filename, dt.isoformat(), "backup"
+        )
+        destination = os.path.join(path, new_filename)
+        puts("- Backing up {0} to {1}".format(
+            colored.cyan(target),
+            colored.cyan(destination)
+        ))
+
+        shutil.copy(target, destination)
 

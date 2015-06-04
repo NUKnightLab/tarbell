@@ -27,7 +27,7 @@ from oauth2client import client
 from oauth2client import keyring_storage
 
 from .oauth import get_drive_api
-from .utils import make_dir, delete_dir
+from .utils import make_dir, delete_dir, backup
 
 from tarbell import __VERSION__ as VERSION
 
@@ -94,18 +94,6 @@ def load_module_data(module_path, module_name):
         if isinstance(r, Exception):
             raise r
         return r
-
-
-def backup(path, filename):
-    """Backup a file"""
-    target = os.path.join(path, filename)
-    if os.path.isfile(target):
-        dt = datetime.now()
-        new_filename = ".{0}.{1}.{2}".format(
-            filename, dt.isoformat(), "backup"
-        )
-        destination = os.path.join(path, new_filename)
-        shutil.copy(target, destination)
 
 
 def safe_write(data, path):
