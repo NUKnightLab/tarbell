@@ -1,0 +1,4 @@
+# Common requirements for tarbell projects
+Flask==0.10.1
+PyYAML==3.11
+sh==1.9

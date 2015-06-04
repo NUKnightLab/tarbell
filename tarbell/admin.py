@@ -24,7 +24,6 @@ from clint.textui import colored
 from apiclient.http import MediaFileUpload as _MediaFileUpload
 from apiclient import errors
 
-
 from oauth2client import client
 from oauth2client import keyring_storage
 
@@ -32,6 +31,9 @@ from .oauth import OAUTH_SCOPE, get_drive_api
 from .utils import puts
 
 from tarbell import __VERSION__ as VERSION
+
+# This directory
+TARBELL_PATH = os.path.dirname(os.path.abspath(__file__))
 
 DEFAULT_BLUEPRINTS = [
     {
@@ -60,6 +62,7 @@ DEFAULT_CONFIG = {
 }
 
 
+
 def _load_module_data(q, module_path, module_name):    
     """Load module and push dict of values into queue"""
     try:
@@ -79,6 +82,7 @@ def _load_module_data(q, module_path, module_name):
     except Exception, e:
         q.put(e)
 
+
 def load_module_data(module_path, module_name):
     """Load module in subprocess and return dict of values"""
     q = Queue()
@@ -93,6 +97,7 @@ def load_module_data(module_path, module_name):
             raise r
         return r
 
+
 def _make_dir(path):
     """Create directory"""
     try:
@@ -102,6 +107,7 @@ def _make_dir(path):
             raise Exception('Error creating directory "%s", already exists' % path)
         else:
             raise Exception('Error creating directory "%s", %s' % (path, str(e)))
+
 
 def _delete_dir(path):
     """Delete directory"""
@@ -114,12 +120,28 @@ def _delete_dir(path):
         pass
         
 
+def make_project_config(global_config, name, title):
+    """Compose project config"""
+    project_config = DEFAULT_CONFIG.copy()
+    
+    project_config['DEFAULT_CONTEXT']['name'] = name
+    project_config['DEFAULT_CONTEXT']['title'] = title
+        
+    if 'default_s3_buckets' in global_config \
+    and global_config['default_s3_buckets'].keys():
+        project_config['S3_BUCKETS'] = {}
+        for k, v in global_config['default_s3_buckets'].iteritems():
+            project_config['S3_BUCKETS'][k] = "%s/%s" % (v, name)
+    
+    return project_config
+
+
 def write_project_config(project_path, project_config):
     """Write project config yaml"""
     yaml_path = os.path.join(project_path, 'tarbell_config.yaml')
-    print 'writing project_config', yaml_path
     with open(yaml_path, 'w') as f:
         yaml.dump(project_config, f, default_flow_style=False)
+
 
 def read_project_config(project_path):
     """
@@ -174,18 +196,32 @@ def list_projects(projects_dir):
 
     
 def _ve_subprocess(env_path, *argv):
-    """Run command in virtual env using subprocess.Popen"""
+    """
+    Run command in virtual env using subprocess.Popen
+    
+    To wait for termination:
+    
+        proc = _ve_subprocess(...)
+        (stdout_data, stderr_data) = proc.communicate()  
+        if proc.returncode:
+            # non-zero return code signifies error
+            
+    Else, call proc.poll() and check the return value.
+    
+        None    process is still running
+        0       exited without error
+        other   exited with error 
+        
+    For a non-zero return value, call proc.communicate as above and
+    check stderr_data for any error output.
+    """
     this_path = os.path.dirname(os.path.abspath(__file__))
         
     bin_path = os.path.join(env_path, 'bin')
     python_path = os.path.join(bin_path, 'python')
     script_path = os.path.join(this_path, 'cmd.py')
     
-    # DEBUG
-    print 'bin_path', bin_path
-    print 'python_path', python_path
-    print 'script_path', script_path
-    
+     
     # Make copy of current environment with PATH update
     env = os.environ.copy()
     env['PATH'] = '%s:%s' % (bin_path, os.environ["PATH"])
@@ -199,17 +235,33 @@ def _ve_subprocess(env_path, *argv):
         stderr=subprocess.PIPE,
         env=env)   
   
+ 
+def _install_requirements(env_path, file_path):
+    """Install requirements in virtual env from file"""
+    proc = _ve_subprocess(env_path, 'pip_install', file_path)
+    (stdout_data, stderr_data) = proc.communicate()   
+     
+    if proc.returncode:
+        raise Exception(
+            'Error installing requirements from %s, %s [%d]' \
+            % (file_path, stderr_data, proc.returncode))
+
     
-def create_virtualenv(env_path):
-    """Create virtual environment"""
+def create_project_virtualenv(env_path):
+    """Create virtual environment and install common requirements"""
     try:
         sh.virtualenv('--clear', env_path)
     except sh.ErrorReturnCode, e:
         raise Exception('Error creating virtual environment, %s' \
             % e.stderr.strip().split('\n')[-1])
+               
+    file_path = os.path.join(
+        os.path.dirname(os.path.abspath(__file__)),
+        'files', 'project_requirements.txt')
+    _install_requirements(env_path, file_path)
 
 
-def install_requirements(env_path, project_path):
+def install_project_requirements(env_path, project_path):
     """Install project requirements in virtual environment"""   
     dir_list = [
         os.path.join(project_path, '_blueprint'),
@@ -220,28 +272,9 @@ def install_requirements(env_path, project_path):
     for dir in dir_list:
         file_path = os.path.join(dir, 'requirements.txt')      
         if os.path.exists(file_path):        
-            proc = _ve_subprocess(env_path, 'pip_install', file_path)
-            (stdout_data, stderr_data) = proc.communicate()   
-             
-            if proc.returncode:
-                raise Exception(
-                    'Error installing requirements from %s, %s [%d]' \
-                    % (file_path, stderr_data, proc.returncode))
-
-
-def make_project_config(global_config, name, title):
-    project_config = DEFAULT_CONFIG.copy()
-    
-    project_config['DEFAULT_CONTEXT']['name'] = name
-    project_config['DEFAULT_CONTEXT']['title'] = title
-        
-    if 'default_s3_buckets' in global_config \
-    and global_config['default_s3_buckets'].keys():
-        project_config['S3_BUCKETS'] = {}
-        for k, v in global_config['default_s3_buckets'].iteritems():
-            project_config['S3_BUCKETS'][k] = "%s/%s" % (v, name)
-    
-    return project_config
+            _install_requirements(env_path, file_path)
+            
+            
             
 
 
@@ -338,7 +371,7 @@ def create_project(env_path, project_path, blueprint, project_config):
         git.commit(m='Created from {0}'.format(blueprint['name']))
         
         # Make virtual environment
-        create_virtualenv(env_path)
+        create_project_virtualenv(env_path)
         
         # Install requirements
         install_requirements(env_path, project_path)
@@ -446,3 +479,5 @@ def client_secrets_authorize(client_secrets_path, code):
         storage.put(credentials)        
     except client.FlowExchangeError, e:
         raise Exception('Authentication failed: %s' % e)    
+
+

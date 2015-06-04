@@ -182,6 +182,7 @@ class TarbellAdminSite:
         except Exception, e:
             traceback.print_exc()
             return jsonify({'error': str(e)})
+
  
     def config_save(self):
         """Save the configuration"""
