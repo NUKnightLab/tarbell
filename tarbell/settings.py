@@ -3,9 +3,6 @@ import os
 import sys
 import yaml
 
-from clint.textui import colored
-from .utils import show_error
-
 EMPTY_BLUEPRINT = {"name": "Empty project (no blueprint)"}
 
 class Settings:
