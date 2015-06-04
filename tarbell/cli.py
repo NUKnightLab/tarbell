@@ -38,7 +38,7 @@ from .configure import tarbell_configure
 from .s3 import S3Url, S3Sync
 from .settings import Settings
 from .utils import list_get, split_sentences, show_error
-from .utils import puts, is_werkzeug_process
+from .utils import puts, is_werkzeug_process, make_dir, delete_dir
 from .gui import TarbellAdminSite
 
 # Set args
@@ -138,7 +138,7 @@ def tarbell_generate(command, args, skip_args=False, extra_context=None, quiet=F
                 puts(("\nDeleting {0}...\n").format(
                     colored.cyan(output_root)
                 ))
-                _delete_dir(output_root)
+                delete_dir(output_root)
             else:
                 puts("\nNot overwriting. See ya!")
                 sys.exit()
@@ -168,7 +168,7 @@ def tarbell_install(command, args):
             config = testgit.show("HEAD:tarbell_config.py")
             puts("\n- Found tarbell_config.py")
             path = _get_path(_clean_suffix(project_name, ".git"), settings)
-            _mkdir(path)
+            make_dir(path)
             git = sh.git.bake(_cwd=path)
             clone = git.clone(project_url, '.', _tty_in=True, _tty_out=False, _err_to_out=True)
             puts(clone)
@@ -185,7 +185,7 @@ def tarbell_install(command, args):
             else:
                 error = 'Not a valid repository or Tarbell project'
         finally:
-            _delete_dir(tempdir)
+            delete_dir(tempdir)
             if error:
                 show_error(error)
             else:
@@ -239,7 +239,7 @@ def tarbell_install_blueprint(command, args):
             else:
                 error = 'Not a valid repository or Tarbell project'
         finally:
-            _delete_dir(tempdir)
+            delete_dir(tempdir)
             if error:
                 show_error(error)
             else:
@@ -361,7 +361,7 @@ def tarbell_publish(command, args):
         except KeyboardInterrupt:
             show_error("ctrl-c pressed, bailing out!")
         finally:
-            _delete_dir(tempdir)
+            delete_dir(tempdir)
 
 
 def tarbell_newproject(command, args):
@@ -371,15 +371,15 @@ def tarbell_newproject(command, args):
         name = _get_project_name(args)
         puts("Creating {0}".format(colored.cyan(name)))
         path = _get_path(name, settings)
-        _mkdir(path)
+        make_dir(path)
 
         try:
             _newproject(command, path, name, settings)
         except KeyboardInterrupt:
-            _delete_dir(path)
+            delete_dir(path)
             show_error("ctrl-c pressed, not creating new project.")
         except:
-            _delete_dir(path)
+            delete_dir(path)
             show_error("Unexpected error: {0}".format(sys.exc_info()[0]))
             raise
 
@@ -602,18 +602,6 @@ def _get_path(name, settings, mkdir=True):
     return os.path.expanduser(path)
 
 
-def _mkdir(path):
-    """Make a directory or bail."""
-    try:
-        os.mkdir(path)
-    except OSError, e:
-        if e.errno == 17:
-            show_error("ABORTING: Directory {0} already exists.".format(path))
-        else:
-            show_error("ABORTING: OSError {0}".format(e))
-        sys.exit()
-
-
 def _get_template(settings):
     """Prompt user to pick template from a list."""
     puts("\nPick a template\n")
@@ -763,17 +751,6 @@ def _copy_config_template(name, title, template, path, key, settings):
         content = env.get_template('tarbell_config.py.template').render(context)
         codecs.open(os.path.join(path, "tarbell_config.py"), "w", encoding="utf-8").write(content)
         puts("\n- Done copying configuration file")
-
-
-def _delete_dir(dir):
-    """Delete tempdir"""
-    try:
-        shutil.rmtree(dir)  # delete directory
-    except OSError as exc:
-        if exc.errno != 2:  # code 2 - no such file or directory
-            raise  # re-raise exception
-    except UnboundLocalError:
-        pass
 
 
 class Command(object):

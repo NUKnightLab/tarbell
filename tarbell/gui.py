@@ -14,7 +14,9 @@ from flask import Flask, request, render_template, jsonify
 
 from tarbell import __VERSION__ as VERSION
 
-from .admin import DEFAULT_BLUEPRINTS, props, safe_write, \
+from .utils import props
+
+from .admin import DEFAULT_BLUEPRINTS, safe_write, \
     get_or_create_config, \
     client_secrets_authorize_url, client_secrets_authorize, \
     list_projects, \
@@ -118,8 +120,6 @@ class TarbellAdminSite:
         """Main view"""
         self.settings = Settings()
         
-        projects = []
-        
         if self.settings.file_missing:
             get_or_create_config(self.settings.path)
             
@@ -217,8 +217,7 @@ class TarbellAdminSite:
     def project_create(self):
         """Create a new project"""
         try:
-            name, title = self._request_get_required(
-                'name', 'title')
+            name, title = self._request_get_required('name', 'title')
             blueprint_url = self._request_get('blueprint')
             
             # Check project path           
@@ -265,8 +264,8 @@ class TarbellAdminSite:
     def spreadsheet_create(self):
         """Create spreadsheet for project"""
         try:
-            name, emails = self._request_get_required(
-                'name', 'emails')
+            name = self._request_get_required('name')
+            emails = self._request_get('emails')
             
             project_path = self._project_path(name)
             project_config = read_project_config(project_path) 
@@ -313,9 +312,10 @@ class TarbellAdminSite:
             if not os.path.exists(env_path):
                 raise Exception(
                     'The virtual environment for this project does not exist')
-            # Ok, so maybe create virtual env here?  I dunno
-                                
-           
+                               
+            raise Exception('not implemented yet')
+            
+                      
             proc = run_project(env_path, project_path, ip, port)
             
             # Wait for server to come up  
@@ -345,7 +345,6 @@ class TarbellAdminSite:
                 raise Exception('Could not start preview server: %s' % stderr_data)
                   
             raise Exception('Could not start preview server')
-
  
         except Exception, e:
             traceback.print_exc()

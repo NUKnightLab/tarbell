@@ -19,7 +19,6 @@ import sys
 import yaml
 
 from datetime import datetime
-from clint.textui import colored
 
 from apiclient.http import MediaFileUpload as _MediaFileUpload
 from apiclient import errors
@@ -28,7 +27,7 @@ from oauth2client import client
 from oauth2client import keyring_storage
 
 from .oauth import OAUTH_SCOPE, get_drive_api
-from .utils import puts
+from .utils import make_dir, delete_dir
 
 from tarbell import __VERSION__ as VERSION
 
@@ -60,8 +59,7 @@ DEFAULT_CONFIG = {
         'title': ''
     }
 }
-
-
+        
 
 def _load_module_data(q, module_path, module_name):    
     """Load module and push dict of values into queue"""
@@ -98,27 +96,49 @@ def load_module_data(module_path, module_name):
         return r
 
 
-def _make_dir(path):
-    """Create directory"""
-    try:
-        os.mkdir(path)        
-    except OSError, e:
-        if e.errno == 16:
-            raise Exception('Error creating directory "%s", already exists' % path)
-        else:
-            raise Exception('Error creating directory "%s", %s' % (path, str(e)))
+def backup(path, filename):
+    """Backup a file"""
+    target = os.path.join(path, filename)
+    if os.path.isfile(target):
+        dt = datetime.now()
+        new_filename = ".{0}.{1}.{2}".format(
+            filename, dt.isoformat(), "backup"
+        )
+        destination = os.path.join(path, new_filename)
+        shutil.copy(target, destination)
 
 
-def _delete_dir(path):
-    """Delete directory"""
+def safe_write(data, path):
+    """Write data to path.  If path exists, backup first"""
+    dirname = os.path.dirname(path)
+    filename = os.path.basename(path)
+    
+    if os.path.exists(path):
+        backup(dirname, filename)
+    
+    print 'Writing %s' % path
+    with open(path, 'w+') as f:
+        f.write(data)
+
+
+def get_or_create_config(path):
+    """Get or create a tarbell configuration directory"""
+    dirname = os.path.dirname(path)
+    filename = os.path.basename(path)
+
     try:
-        shutil.rmtree(path)
-    except OSError, e:
-        if e.errno != 2:  # code 2 - no such file or directory
-            raise Exception(str(e))
-    except UnboundLocalError:
+        os.makedirs(dirname)
+    except OSError:
         pass
-        
+
+    try:
+        with open(path, 'r+') as f:
+            if os.path.isfile(path):
+                backup(dirname, filename)
+            return yaml.load(f)
+    except IOError:
+        return {}
+    
 
 def make_project_config(global_config, name, title):
     """Compose project config"""
@@ -215,13 +235,10 @@ def _ve_subprocess(env_path, *argv):
     For a non-zero return value, call proc.communicate as above and
     check stderr_data for any error output.
     """
-    this_path = os.path.dirname(os.path.abspath(__file__))
-        
     bin_path = os.path.join(env_path, 'bin')
     python_path = os.path.join(bin_path, 'python')
-    script_path = os.path.join(this_path, 'cmd.py')
-    
-     
+    script_path = os.path.join(TARBELL_PATH, 'cmd.py')
+        
     # Make copy of current environment with PATH update
     env = os.environ.copy()
     env['PATH'] = '%s:%s' % (bin_path, os.environ["PATH"])
@@ -256,8 +273,7 @@ def create_project_virtualenv(env_path):
             % e.stderr.strip().split('\n')[-1])
                
     file_path = os.path.join(
-        os.path.dirname(os.path.abspath(__file__)),
-        'files', 'project_requirements.txt')
+        TARBELL_PATH, 'files', 'project_requirements.txt')
     _install_requirements(env_path, file_path)
 
 
@@ -274,9 +290,6 @@ def install_project_requirements(env_path, project_path):
         if os.path.exists(file_path):        
             _install_requirements(env_path, file_path)
             
-            
-            
-
 
 def _add_user_to_file(file_id, service, user_email,
                       perm_type='user', role='writer'):
@@ -293,44 +306,15 @@ def _add_user_to_file(file_id, service, user_email,
         service.permissions()\
             .insert(fileId=file_id, body=new_permission)\
             .execute()
-    except errors.HttpError, error:
-        show_error('An error adding users to spreadsheet: {0}'.format(error))
-
-
-def create_spreadsheet(spreadsheet_path, name, title, emails):
-    """
-    Create a new project spreadsheet
-    spreadsheet_path = os.path.join(project_path, '_blueprint', '_spreadsheet.xlsx')
-    https://docs.google.com/spreadsheet/ccc?key={0}
-    """
-    if not os.path.exists(spreadsheet_path):
-        raise Exception('%s does not exist' % spreadsheet_path)
-    
-    media_body = _MediaFileUpload(
-        spreadsheet_path, mimetype='application/vnd.ms-excel')
-    
-    body = {
-        'title': '{0} (Tarbell)'.format(title),
-        'description': '{0} ({1})'.format(title, name),
-        'mimeType': 'application/vnd.ms-excel',
-    }  
-      
-    service = get_drive_api()
-    try:
-        newfile = service.files()\
-            .insert(body=body, media_body=media_body, convert=True)\
-            .execute()
-        for email in emails.split(","):
-            _add_user_to_file(newfile['id'], service, user_email=email.strip())
-            
-        return newfile['id']
-    except errors.HttpError, error:
-        raise Exception('Error creating spreadsheet, %s' % str(error))
+    except errors.HttpError, e :
+        raise Exception(
+            'Error adding users "%s" to spreadsheet, %s' \
+            % (user_email, str(e)))
   
-        
+
 def create_project(env_path, project_path, blueprint, project_config):
     """Create a new project"""
-    _make_dir(project_path)
+    make_dir(project_path)
 
     try:        
         # Init repo
@@ -363,9 +347,13 @@ def create_project(env_path, project_path, blueprint, project_config):
             empty_index_path = os.path.join(project_path, "index.html")
             open(empty_index_path, "w")
         
-        # Create config file(s)
+        # Write config file(s)
         write_project_config(project_path, project_config)
         
+        # Copy old-style tarbell_config for compatability with yaml
+        file_path = os.path.join(TARBELL_PATH, 'files', 'tarbell_config.py')
+        shutil.copy2(file_path, project_path)
+                
         # Commmit
         git.add('.')
         git.commit(m='Created from {0}'.format(blueprint['name']))
@@ -374,11 +362,11 @@ def create_project(env_path, project_path, blueprint, project_config):
         create_project_virtualenv(env_path)
         
         # Install requirements
-        install_requirements(env_path, project_path)
+        install_project_requirements(env_path, project_path)
        
         # TODO: Run newproject hook                        
     except Exception, e:
-        _delete_dir(project_path)
+        delete_dir(project_path)
         raise e 
     
       
@@ -388,85 +376,43 @@ def run_project(env_path, project_path, ip, port):
         'run_project', project_path, ip, port)
     
     
-
-#
-# -------------
-#
-
-def props(obj):
+def create_spreadsheet(spreadsheet_path, name, title, emails):
     """
-    Return object as dictionary
-    Only gets attributes set on the instance, not on the class!
+    Create a new project spreadsheet
+    spreadsheet_path = os.path.join(project_path, '_blueprint', '_spreadsheet.xlsx')
+    https://docs.google.com/spreadsheet/ccc?key={0}
     """
-    return dict((key, value) \
-        for key, value in obj.__dict__.iteritems() \
-        if not callable(value) and not key.startswith('__'))
-
-def backup(path, filename):
-    """Backup a file"""
-    target = os.path.join(path, filename)
-    if os.path.isfile(target):
-        dt = datetime.now()
-        new_filename = ".{0}.{1}.{2}".format(
-            filename, dt.isoformat(), "backup"
-        )
-        destination = os.path.join(path, new_filename)
-        print("- Backing up {0} to {1}".format(
-            colored.cyan(target),
-            colored.cyan(destination)
-        ))
-        shutil.copy(target, destination)
-
-def safe_write(data, path, backup_existing=True):
-    """Write data to path.  If path exists, backup first"""
-    dirname = os.path.dirname(path)
-    filename = os.path.basename(path)
+    if not os.path.exists(spreadsheet_path):
+        raise Exception('%s does not exist' % spreadsheet_path)
     
-    if backup_existing and os.path.exists(path):
-        backup(dirname, filename)
+    media_body = _MediaFileUpload(
+        spreadsheet_path, mimetype='application/vnd.ms-excel')
     
-    print 'Writing %s' % path
-    with open(path, 'w+') as f:
-        f.write(data)
+    body = {
+        'title': '{0} (Tarbell)'.format(title),
+        'description': '{0} ({1})'.format(title, name),
+        'mimeType': 'application/vnd.ms-excel',
+    }  
+      
+    service = get_drive_api()
+    try:
+        newfile = service.files()\
+            .insert(body=body, media_body=media_body, convert=True)\
+            .execute()
+        for email in emails.split(","):
+            _add_user_to_file(newfile['id'], service, user_email=email.strip())
+            
+        return newfile['id']
+    except errors.HttpError, error:
+        raise Exception('Error creating spreadsheet, %s' % str(error))
+
          
-def get_or_create_config(path):
-    """Get or create a tarbell configuration directory"""
-    dirname = os.path.dirname(path)
-    filename = os.path.basename(path)
-
-    try:
-        os.makedirs(dirname)
-    except OSError:
-        pass
-
-    try:
-        with open(path, 'r+') as f:
-            if os.path.isfile(path):
-                puts("{0} already exists, backing up".format(colored.green(path)))
-                backup(dirname, filename)
-            return yaml.load(f)
-    except IOError:
-        return {}
-    
-def load_module_dict(module_name, module_path):
-    """
-    Load module as a dictionary
-    This works fine as long as the module doesn't import other modules!
-    """
-    filename, pathname, description = imp.find_module(module_name, [module_path])
-    m = imp.load_module(os.path.dirname(module_path), filename, pathname, description)
-    
-    d = dict([(varname, getattr(m, varname)) \
-        for varname in dir(m) if not varname.startswith("_") ]) 
-
-    del sys.modules[m.__name__]
-    return d
-
 def client_secrets_authorize_url(client_secrets_path):  
     """Get the client_secrets authorization url"""
     flow = client.flow_from_clientsecrets(client_secrets_path, \
         scope=OAUTH_SCOPE, redirect_uri=client.OOB_CALLBACK_URN)
     return flow.step1_get_authorize_url()
+
 
 def client_secrets_authorize(client_secrets_path, code):
     """Authorize client_secrets"""

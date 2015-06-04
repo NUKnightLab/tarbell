@@ -10,6 +10,7 @@ This module provides utilities for Tarbell.
 import os
 import sys
 from clint.textui import colored, puts as _puts
+import shutil
 
 
 def is_werkzeug_process():
@@ -21,6 +22,16 @@ def puts(*args, **kwargs):
     """Wrap puts to avoid getting called twice by Werkzeug reloader"""
     if not is_werkzeug_process():
         return _puts(*args, **kwargs)
+
+
+def props(obj):
+    """
+    Return object as dictionary
+    Only gets attributes set on the instance, not on the class!
+    """
+    return dict((key, value) \
+        for key, value in obj.__dict__.iteritems() \
+        if not callable(value) and not key.startswith('__'))
 
 
 def list_get(l, idx, default=None):
@@ -51,3 +62,33 @@ def show_error(msg):
     """Displays error message."""
     sys.stdout.flush()
     sys.stderr.write("\n{0}: {1}".format(colored.red("Error"), msg + '\n'))
+    
+    
+def make_dir(path):
+    """Create directory"""
+    try:
+        os.mkdir(path)        
+    except OSError, e:
+        if is_werkzeug_process():
+            if e.errno == 16:
+                raise Exception('Error creating directory "%s", already exists' % path)
+            else:
+                raise Exception('Error creating directory "%s", %s' % (path, str(e)))
+        else:
+            if e.errno == 17:
+                show_error("ABORTING: Directory {0} already exists.".format(path))
+            else:
+                show_error("ABORTING: OSError {0}".format(e))
+            sys.exit()
+
+            
+def delete_dir(path):
+    """Delete directory"""
+    try:
+        shutil.rmtree(path)
+    except OSError, e:
+        if e.errno != 2:  # code 2 - no such file or directory
+            raise Exception(str(e))
+    except UnboundLocalError:
+        pass
+
