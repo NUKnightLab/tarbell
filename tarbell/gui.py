@@ -14,10 +14,10 @@ from flask import Flask, request, render_template, jsonify
 
 from tarbell import __VERSION__ as VERSION
 from .configure import get_or_create_config
+from .oauth import get_client_secrets_authorize_url, authorize_client_secrets
 from .utils import props
 
 from .admin import DEFAULT_BLUEPRINTS, safe_write, \
-    client_secrets_authorize_url, client_secrets_authorize, \
     list_projects, \
     make_project_config, read_project_config, write_project_config, \
     create_project, create_spreadsheet, run_project
@@ -162,7 +162,7 @@ class TarbellAdminSite:
     def google_auth_url(self):
         """Get google authorization url"""
         try:
-            url = client_secrets_authorize_url(
+            url = get_client_secrets_authorize_url(
                 self.settings.client_secrets_path)
             
             return(jsonify({'url': url}))
@@ -174,7 +174,7 @@ class TarbellAdminSite:
         """Verify google confirmation code"""
         try:
             code = self._request_get_required('code')                       
-            client_secrets_authorize(
+            authorize_client_secrets(
                 self.settings.client_secrets_path, code)            
             
             return jsonify({})

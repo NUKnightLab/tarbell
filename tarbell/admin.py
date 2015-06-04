@@ -26,7 +26,7 @@ from apiclient import errors
 from oauth2client import client
 from oauth2client import keyring_storage
 
-from .oauth import OAUTH_SCOPE, get_drive_api
+from .oauth import get_drive_api
 from .utils import make_dir, delete_dir
 
 from tarbell import __VERSION__ as VERSION
@@ -387,24 +387,5 @@ def create_spreadsheet(spreadsheet_path, name, title, emails):
     except errors.HttpError, error:
         raise Exception('Error creating spreadsheet, %s' % str(error))
 
-         
-def client_secrets_authorize_url(client_secrets_path):  
-    """Get the client_secrets authorization url"""
-    flow = client.flow_from_clientsecrets(client_secrets_path, \
-        scope=OAUTH_SCOPE, redirect_uri=client.OOB_CALLBACK_URN)
-    return flow.step1_get_authorize_url()
-
-
-def client_secrets_authorize(client_secrets_path, code):
-    """Authorize client_secrets"""
-    flow = client.flow_from_clientsecrets(client_secrets_path, \
-        scope=OAUTH_SCOPE, redirect_uri=client.OOB_CALLBACK_URN)
-
-    try:
-        storage = keyring_storage.Storage('tarbell', getpass.getuser())
-        credentials = flow.step2_exchange(code, http=httplib2.Http())
-        storage.put(credentials)        
-    except client.FlowExchangeError, e:
-        raise Exception('Authentication failed: %s' % e)    
 
 

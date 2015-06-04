@@ -51,6 +51,26 @@ def get_drive_api_from_client_secrets(path, reset_creds=False):
     return _get_drive_api(credentials)
 
 
+def get_client_secrets_authorize_url(client_secrets_path):  
+    """Return the client_secrets authorization url (for admin GUI)"""
+    flow = client.flow_from_clientsecrets(client_secrets_path, \
+        scope=OAUTH_SCOPE, redirect_uri=client.OOB_CALLBACK_URN)
+    return flow.step1_get_authorize_url()
+
+
+def authorize_client_secrets(client_secrets_path, code):
+    """Authorize client_secrets using code (for admin GUI)"""
+    flow = client.flow_from_clientsecrets(client_secrets_path, \
+        scope=OAUTH_SCOPE, redirect_uri=client.OOB_CALLBACK_URN)
+
+    try:
+        storage = keyring_storage.Storage('tarbell', getpass.getuser())
+        credentials = flow.step2_exchange(code, http=httplib2.Http())
+        storage.put(credentials)        
+    except client.FlowExchangeError, e:
+        raise Exception('Authentication failed: %s' % e)    
+
+
 def get_drive_api_from_file(path):
     f = open(path)
     credentials = client.OAuth2Credentials.from_json(f.read())
