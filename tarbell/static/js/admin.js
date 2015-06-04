@@ -450,7 +450,7 @@ $(function() {
         .on('hide.bs.modal', function(event) {
             show_projects();
         })
-        .on('change', '#new_name, #new_title, #new_emails', function(event) {
+        .on('change', '#new_name, #new_title', function(event) {
             if($(this).val().trim()) {
                 $(this).closest('.form-group').removeClass('has-error'); 
             }
@@ -495,17 +495,11 @@ $(function() {
                 });
         })
         .on('click', '#new_spreadsheet_button', function(event) {
-            var emails = $('#new_emails').val().trim();
-            if(!emails) {
-                $('#new_emails').closest('.form-group').addClass('has-error');
-                return;
-            }
-           
             $new_modal.trigger('progress_show', 'Creating spreadsheet');
             
             ajax_get('/spreadsheet/create/', {
                     name: $('#new_name').val().trim(),
-                    emails: emails
+                    emails: $('#new_emails').val().trim()
                 },
                 function(error) {
                     $new_modal.trigger('error_show', error);
