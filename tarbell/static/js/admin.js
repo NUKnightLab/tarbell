@@ -19,6 +19,20 @@ var _select_blueprint_template = _.template($('#select_blueprint_template').html
 
 
 //
+// info
+//
+
+function info_modal(msg) {
+    $('#info_modal .modal-msg').html(msg);
+    $('#info_modal').modal('show');
+}
+
+function info_hide() {
+    $('#info_modal').modal('hide');
+}
+
+
+//
 // progress modal
 //
 
@@ -128,15 +142,14 @@ function show_projects() {
             error_alert('Error listing projects ('+error+')');
         },
         function(data) {    
-            var projects = data.projects;    
+            _projects = data.projects;    
             var html = '';
     
-            for(var i = 0; i < projects.length; i++) {
-                html += _project_template({d: projects[i]});
+            for(var i = 0; i < _projects.length; i++) {
+                html += _project_template({d: _projects[i]});
             }    
-            console.log(projects.length);
             
-            if(projects.length) {
+            if(_projects.length) {
                 $('#projects_alert').hide();
                 $('#projects_table tbody').html(html);
                 $('#projects_table').show();
@@ -159,18 +172,32 @@ function project_edit(target) {
 function project_publish(target) {
     var $row = $(target).closest('tr');
     var name = $row.attr('data-project');
-
-    alert('not implemented yet');
+    var project = null;
+    
+    for(var i = 0; i < _projects.length; i++) {
+        if(name == _projects[i].DEFAULT_CONTEXT.name) {
+            project = _projects[i];
+        }
+    }
+    if(!project) {
+        error_alert('Could not find project in projects list')
+        return;
+    }
+    if(!(project.S3_BUCKETS && _.size(project.S3_BUCKETS))) {
+        info_modal("To publish this project, you must define at least"
+            + " one S3 bucket in either your main Tarbell settings"
+            + " or the settings for this project.")
+        return;        
+    }    
+    
+    alert('need to implement publishing modal');     
 }
-
 
 // Delete a project
 function project_delete(target) {
-    var $row = $(target).closest('tr');
-    var name = $row.attr('data-project');
+    var name = $(target).closest('tr').attr('data-project');
     
-    confirm_show('Are you sure you want to delete the'
-        + ' <strong>'+name+'</strong> project?  This cannot be undone.', 
+    confirm_show('Are you sure you want to delete the <strong>'+name+'</strong> project?  This cannot be undone.', 
         function(yes) {
             if(yes) {
                 progress_show('Deleting project');
@@ -180,7 +207,6 @@ function project_delete(target) {
                         error_alert(error);
                     },
                     function(data) {
-                        $row.remove();
                         show_projects();
                     },
                     function() {
@@ -418,6 +444,8 @@ $(function() {
         alert_hide();
         $('.form-group, .input-group').removeClass('has-error');        
     });
+    
+  
    
 // ------------------------------------------------------------
 // settings tab

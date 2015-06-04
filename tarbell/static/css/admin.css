@@ -102,6 +102,10 @@ p.section:first-child {
     margin-left: 10px;
 }
 
+.project-actions a.disabled {
+    color: lightgray;
+}
+
 /* settings tab 
 */
 

@@ -187,6 +187,18 @@
 </div> <!-- // row -->
 </div> <!-- // container-fluid -->
 
+<!-- MODAL ALERT: info -->
+<div id="info_modal" class="modal fade" data-keyboard="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-body">
+                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span></button>
+                <p><span class="modal-msg"></span></p>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- MODAL: progress -->
 <div id="progress_modal" class="modal fade" data-backdrop="static" data-keyboard="false">
     <div class="modal-dialog">
@@ -439,6 +451,8 @@ var _defaults = {{ defaults|tojson }};
 var _settings = {{ settings|tojson }};
 
 var _config = _settings.config;
+
+var _projects = [];
 
 </script>
 
