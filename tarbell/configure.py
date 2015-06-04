@@ -14,12 +14,12 @@ import shutil
 
 from subprocess import call
 from datetime import datetime
-from clint.textui import colored, puts
+from clint.textui import colored
 from tarbell import LONG_VERSION
 
 from .settings import Settings
 from .oauth import get_drive_api_from_client_secrets
-from .utils import show_error
+from .utils import puts, show_error
 
 
 def tarbell_configure(command, args):
@@ -34,7 +34,7 @@ def tarbell_configure(command, args):
     if len(args):
         prompt = False
 
-    config = _get_or_create_config(path)
+    config = get_or_create_config(path)
 
     if prompt or "drive" in args:
         config.update(_setup_google_spreadsheets(config, path, prompt))
@@ -65,7 +65,7 @@ def tarbell_configure(command, args):
     return settings
 
 
-def _get_or_create_config(path, prompt=True):
+def get_or_create_config(path, prompt=True):
     """Get or create a Tarbell configuration directory."""
     dirname = os.path.dirname(path)
     filename = os.path.basename(path)
