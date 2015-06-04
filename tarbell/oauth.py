@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 import getpass
-import httplib2
 import os
 
+import httplib2
 from apiclient import discovery
 from oauth2client import client
 from oauth2client import keyring_storage
