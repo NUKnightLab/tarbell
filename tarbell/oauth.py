@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
+from argparse import ArgumentParser, RawDescriptionHelpFormatter
 import getpass
 import httplib2
 import os
 
 from apiclient import discovery
-from argparse import ArgumentParser, RawDescriptionHelpFormatter
 from oauth2client import client
 from oauth2client import keyring_storage
 from oauth2client import tools
