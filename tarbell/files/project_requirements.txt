@@ -29,4 +29,3 @@ xlrd==0.9.3
 # TO-DO:
 #   .app
 #
-# need clint?

@@ -183,7 +183,8 @@ def list_projects(projects_dir):
                
     return projects_list
 
-    
+
+        
 def _ve_subprocess(env_path, *argv):
     """
     Run command in virtual env using subprocess.Popen
@@ -221,6 +222,19 @@ def _ve_subprocess(env_path, *argv):
         stderr=subprocess.PIPE,
         env=env)   
   
+def test_ve_subprocess():
+    env_path = '/Users/jenny/.tarbell/env/sdakldjlj'
+    print 'TESTING'
+    print env_path
+    
+    proc = _ve_subprocess(env_path, 'test')
+    (stdout_data, stderr_data) = proc.communicate()   
+     
+    if proc.returncode:
+        raise Exception(
+            'Error running ve test %s, %s [%d]' \
+            % (env_path, stderr_data, proc.returncode))
+
  
 def _install_requirements(env_path, file_path):
     """Install requirements in virtual env from file"""
@@ -368,8 +382,9 @@ def create_spreadsheet(spreadsheet_path, name, title, emails):
         newfile = service.files()\
             .insert(body=body, media_body=media_body, convert=True)\
             .execute()
-        for email in emails.split(","):
-            _add_user_to_file(newfile['id'], service, user_email=email.strip())
+        if emails:
+            for email in emails.split(","):
+                _add_user_to_file(newfile['id'], service, user_email=email.strip())
             
         return newfile['id']
     except errors.HttpError, error:
