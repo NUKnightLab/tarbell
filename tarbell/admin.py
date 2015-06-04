@@ -96,19 +96,6 @@ def load_module_data(module_path, module_name):
         return r
 
 
-def safe_write(data, path):
-    """Write data to path.  If path exists, backup first"""
-    dirname = os.path.dirname(path)
-    filename = os.path.basename(path)
-    
-    if os.path.exists(path):
-        backup(dirname, filename)
-    
-    print 'Writing %s' % path
-    with open(path, 'w+') as f:
-        f.write(data)
-    
-
 def make_project_config(global_config, name, title):
     """Compose project config"""
     project_config = DEFAULT_CONFIG.copy()

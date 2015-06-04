@@ -15,10 +15,9 @@ from flask import Flask, request, render_template, jsonify
 from tarbell import __VERSION__ as VERSION
 from .configure import get_or_create_config
 from .oauth import get_client_secrets_authorize_url, authorize_client_secrets
-from .utils import props
+from .utils import props, safe_write
 
 from .admin import DEFAULT_BLUEPRINTS, \
-    safe_write, \
     list_projects, \
     make_project_config, read_project_config, write_project_config, \
     create_project, create_spreadsheet, run_project

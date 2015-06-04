@@ -110,3 +110,15 @@ def backup(path, filename):
 
         shutil.copy(target, destination)
 
+
+def safe_write(data, path):
+    """Write data to path.  If path exists, backup first"""
+    dirname = os.path.dirname(path)
+    filename = os.path.basename(path)
+    
+    if os.path.exists(path):
+        backup(dirname, filename)
+    
+    with open(path, 'w+') as f:
+        f.write(data)
+
