@@ -6,6 +6,7 @@ Flask==0.10.1
 PyYAML==3.11
 sh==1.9
 Markdown==2.4.1
+clint==0.4.1
 #
 # spreadhseets
 #
@@ -16,12 +17,16 @@ xlrd==0.9.3
 #
 # TODO, used by app.py
 #
-# add tarbell directory to path for .errors?
-#from .errors import MergedCellError
 #
-# add tarbell directory to path for .errors?
-#from .hooks import hooks
+# We need stuff from these tarbell modules:
 #
-#from .oauth import get_drive_api
+#   .errors     no secondary imports
+#   .hooks      no secondary imports
+#   .oauth      (see above)
+#   .settings   no secondary imports
+#   .utils      (see above)
 #
-# need settings?
+# TO-DO:
+#   .app
+#
+# need clint?
