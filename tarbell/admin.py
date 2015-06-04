@@ -119,25 +119,6 @@ def safe_write(data, path):
     print 'Writing %s' % path
     with open(path, 'w+') as f:
         f.write(data)
-
-
-def get_or_create_config(path):
-    """Get or create a tarbell configuration directory"""
-    dirname = os.path.dirname(path)
-    filename = os.path.basename(path)
-
-    try:
-        os.makedirs(dirname)
-    except OSError:
-        pass
-
-    try:
-        with open(path, 'r+') as f:
-            if os.path.isfile(path):
-                backup(dirname, filename)
-            return yaml.load(f)
-    except IOError:
-        return {}
     
 
 def make_project_config(global_config, name, title):

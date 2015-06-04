@@ -13,11 +13,10 @@ import json
 from flask import Flask, request, render_template, jsonify
 
 from tarbell import __VERSION__ as VERSION
-
+from .configure import get_or_create_config
 from .utils import props
 
 from .admin import DEFAULT_BLUEPRINTS, safe_write, \
-    get_or_create_config, \
     client_secrets_authorize_url, client_secrets_authorize, \
     list_projects, \
     make_project_config, read_project_config, write_project_config, \
