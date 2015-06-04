@@ -32,6 +32,28 @@ function progress_hide() {
 }
 
 //
+// confirm modal
+//
+
+function confirm_show(msg, callback) {
+    var $confirm_modal = $('#confirm_modal')
+        .on('show.bs.modal', function(event) {
+            $confirm_modal.find('.modal-msg').html(msg);   
+        })
+        .on('click', '.btn-default', function(event) {
+            $confirm_modal.modal('hide');
+            callback(false);
+        })
+        .on('click', '.btn-primary', function(event) {
+            $confirm_modal.modal('hide');
+            callback(true);       
+        });
+        
+    $confirm_modal.modal('show');
+}
+
+
+//
 // input modal
 //
 
@@ -121,6 +143,34 @@ function show_projects() {
         });
 }
 
+// Delete a project
+function project_delete(target) {
+    var $row = $(target).closest('tr');
+    var name = $row.attr('data-project');
+    
+    confirm_show('Are you sure you want to delete the'
+        + ' <strong>'+name+'</strong> project?  This cannot be undone.', 
+        function(yes) {
+            if(yes) {
+                progress_show('Deleting project');
+
+                ajax_get('/project/delete/', {name: name},
+                    function(error) {
+                        error_alert(error);
+                    },
+                    function(data) {
+                        $row.remove();
+                        success_alert('Project deleted');               
+                    },
+                    function() {
+                        progress_hide();
+                    });  
+            }
+        }
+    );
+    
+
+}
 
 //
 // settings

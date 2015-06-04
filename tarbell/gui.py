@@ -20,7 +20,7 @@ from .utils import props, safe_write
 from .admin import DEFAULT_BLUEPRINTS, \
     list_projects, \
     make_project_config, read_project_config, write_project_config, \
-    create_project, create_spreadsheet, run_project
+    create_project, create_spreadsheet, delete_project, run_project
     
 from .settings import Settings
 
@@ -61,6 +61,8 @@ class TarbellAdminSite:
              view_func=self.project_create)
         self.app.add_url_rule('/spreadsheet/create/',
             view_func=self.spreadsheet_create)
+        self.app.add_url_rule('/project/delete/', 
+            view_func=self.project_delete)
         self.app.add_url_rule('/project/run/', 
             view_func=self.project_run)
             
@@ -288,6 +290,27 @@ class TarbellAdminSite:
             traceback.print_exc()
             return jsonify({'error': str(e)})
           
+
+    def project_delete(self):
+        """Delete a project"""
+        try:
+            name = self._request_get_required('name')
+            
+            # Check project path           
+            project_path = self._project_path(name)
+            if not os.path.exists(project_path):
+                raise Exception(
+                    'The project directory "%s" does not exist.' \
+                    % project_path)
+            
+            env_path = self._env_path(name)
+            delete_project(env_path, project_path)
+        
+            return jsonify({})
+        except Exception, e:
+            traceback.print_exc()
+            return jsonify({'error': str(e)})
+
 
     def project_run(self):
         """Run preview server for project"""

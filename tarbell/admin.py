@@ -339,7 +339,23 @@ def create_project(env_path, project_path, blueprint, project_config):
         delete_dir(project_path)
         raise e 
     
-      
+
+def delete_project(env_path, project_path):
+    """Delete a project and its virtual environment"""
+    try:
+        delete_dir(project_path)
+    except Exception ,e:
+        raise Exception('Error deleting project directory, %s' \
+            % str(e))
+    
+    if os.path.exists(env_path):
+        try:
+            delete_dir(env_path)
+        except Exception ,e:
+            raise Exception('Error deleting virtual environment, %s' \
+                % str(e))
+    
+            
 def run_project(env_path, project_path, ip, port):
     """Start preview server for a project"""
     return _ve_subprocess(env_path, 

@@ -43,6 +43,7 @@
         <thead>
             <th class="col-xs-4">Directory</th>
             <th class="col-xs-8">Title</th>
+            <th><!-- icons --></th>
         </thead>
         <tbody>
         </tbody>        
@@ -191,6 +192,23 @@
     </div>
 </div>
 
+<!-- MODAL: confirm -->
+<div id="confirm_modal" class="modal fade" data-backdrop="static" data-keyboard="false">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-body">
+                <p class="modal-msg"></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default">No</button>
+                <button type="button" class="btn btn-primary">Yes</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
 <!-- MODAL: input -->
 <div id="input_modal" class="modal fade" data-backdrop="static" data-keyboard="false">
     <div class="modal-dialog">
@@ -336,6 +354,10 @@
         <td><%= d.DEFAULT_CONTEXT.name %></td>
         <td><a role="button" class="project-title" title="Run this project" data-toggle="modal" data-target="#run_modal">
             <%= d.DEFAULT_CONTEXT.title %></a>
+        </td>
+        <td>
+            <a class="text-danger" href="javascript:" onclick="project_delete(this)">
+                <i class="fa fa-lg fa-trash-o"></i></a>
         </td>
     </tr>
 </script>
