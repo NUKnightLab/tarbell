@@ -256,8 +256,10 @@ def install_project_requirements(env_path, project_path):
     ]
     
     for dir in dir_list:
-        file_path = os.path.join(dir, 'requirements.txt')      
+        file_path = os.path.join(dir, 'requirements.txt')  
+        print '\tChecking %s' % file_path    
         if os.path.exists(file_path):        
+            print '\tInstalling %s' % file_path    
             _install_requirements(env_path, file_path)
             
 
@@ -282,16 +284,30 @@ def _add_user_to_file(file_id, service, user_email,
             % (user_email, str(e)))
   
 
+def install_project():
+    """Install a project"""
+    # Clone project into tempdir
+    
+    # Look for tarbell_config file
+    
+    # Is there a way to check for this file without cloneing to tempdir?
+    
+    
+    pass
+    
+    
 def create_project(env_path, project_path, blueprint, project_config):
     """Create a new project"""
     make_dir(project_path)
 
     try:        
         # Init repo
+        print '+ Initializing repo'
         git = sh.git.bake(_cwd=project_path)
         git.init()
         
         if blueprint.get('url'):
+            print '+ Initializing blueprint'
             # Create submodule
             git.submodule.add(blueprint['url'], '_blueprint')
             git.submodule.update(*['--init'])
@@ -303,6 +319,7 @@ def create_project(env_path, project_path, blueprint, project_config):
                        
             # (handle spreadsheet stuff after)
             
+            print '+ Copying HTML'
             # Copy html files
             files = glob.iglob(os.path.join(project_path, "_blueprint", "*.html"))
             for file in files:
@@ -317,6 +334,7 @@ def create_project(env_path, project_path, blueprint, project_config):
             empty_index_path = os.path.join(project_path, "index.html")
             open(empty_index_path, "w")
         
+        print '+ Writing config'
         # Write config file(s)
         write_project_config(project_path, project_config)
         
@@ -328,9 +346,11 @@ def create_project(env_path, project_path, blueprint, project_config):
         git.add('.')
         git.commit(m='Created from {0}'.format(blueprint['name']))
         
+        print '+ Creating virtual environment'
         # Make virtual environment
         create_project_virtualenv(env_path)
         
+        print '+ Installing requirements'
         # Install requirements
         install_project_requirements(env_path, project_path)
        

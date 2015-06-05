@@ -57,6 +57,8 @@ class TarbellAdminSite:
 
         self.app.add_url_rule('/projects/list/',
              view_func=self.projects_list)
+        self.app.add_url_rule('/project/install/',
+            view_func=self.project_install)
         self.app.add_url_rule('/project/create/',
              view_func=self.project_create)
         self.app.add_url_rule('/spreadsheet/create/',
@@ -216,6 +218,18 @@ class TarbellAdminSite:
             return jsonify({'error': str(e)})            
 
 
+    def project_install(self):
+        """Install a project"""
+        try:
+            project_url = self._request_get_required('url')
+            name = project_url.split("/").pop()
+        
+            raise Exception('not implemented yet')
+        except Exception, e:
+            traceback.print_exc()
+            return jsonify({'error': str(e)})
+            
+            
     def project_create(self):
         """Create a new project"""
         try:

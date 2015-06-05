@@ -160,6 +160,31 @@ function show_projects() {
         });
 }
 
+// Install project
+function project_install() {
+    var url = $('#project_url').val().trim();
+    
+    if(!url) {
+        $('#project_url').focus();
+        return;
+    }
+    
+    progress_show('Installing project');
+    
+    ajax_get('/project/install/', {
+            url: url
+        },
+        function(error) {
+            error_alert(error);
+        },
+        function(data) {
+            show_projects();
+        },
+        function() {
+            progress_hide();
+        });
+}
+
 // Edit project settings
 function project_edit(target) {
     var $row = $(target).closest('tr');
@@ -445,7 +470,6 @@ $(function() {
         $('.form-group, .input-group').removeClass('has-error');        
     });
     
-  
    
 // ------------------------------------------------------------
 // settings tab
